@@ -4,4 +4,4 @@ Disallow: /private/
 Disallow: /dashboard/
 Allow: /
 
-Sitemap: https://newsletter-name-ideas.com/sitemap.xml
+Sitemap: https://newsletternameideas.com/sitemap.xml

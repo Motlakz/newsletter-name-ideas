@@ -41,7 +41,7 @@ The Newsletter Name Ideas is an all-in-one solution designed to help content cre
 
 Ready to name your newsletter and grow your audience? Start now with our AI-powered tools and professional resources.
 
-[**Get Started Now**](https://newsletter-name-ideas.com/newsletter-name-generator)
+[**Get Started Now**](https://newsletternameideas.com/newsletter-name-generator)
 
 ---
 

@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://newsletter-name-ideas.com",
+    url: "https://newsletternameideas.com",
     title: "Newsletter Name Ideas - Creative Newsletter Name Generator",
     description: "Find the perfect name for your newsletter with our AI-powered generator. Create engaging, memorable newsletter names that resonate with your audience.",
     siteName: "Newsletter Name Generator",
