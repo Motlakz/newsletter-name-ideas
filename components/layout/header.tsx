@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/mode-toggle"
 import { Sparkles } from "lucide-react"
+import Logo from "../logo"
 
 export function Header() {
   const pathname = usePathname()
@@ -26,7 +27,7 @@ export function Header() {
     { name: "Generator", path: "/generator" },
     { name: "Tools", path: "/tools" },
     { name: "Analytics", path: "/analytics" },
-    { name: "Resources", path: "/blog" },
+    { name: "Blog", path: "/blog" },
   ]
 
   return (
@@ -37,12 +38,7 @@ export function Header() {
       )}
     >
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-primary" />
-          <span className="font-bold text-xl bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-400">
-            NewsletterGPT
-          </span>
-        </Link>
+        <Logo />
 
         <nav className="hidden md:flex items-center gap-6">
           {navItems.map((item) => (
