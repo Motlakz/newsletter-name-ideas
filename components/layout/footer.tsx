@@ -1,5 +1,4 @@
 import Link from "next/link"
-import { Sparkles } from "lucide-react"
 import Logo from "../logo"
 
 export function Footer() {
@@ -8,7 +7,9 @@ export function Footer() {
       <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="space-y-3">
-            <Logo />
+            <div className="flex items-center gap-2">
+              <Logo />
+            </div>
             <p className="text-sm text-muted-foreground">
               Generate creative, engaging, and memorable newsletter names for your audience
             </p>
@@ -18,8 +19,8 @@ export function Footer() {
             <h3 className="font-semibold mb-3">Features</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link href="/newsletter-name-generator" className="text-muted-foreground hover:text-primary transition-colors">
-                  Newsletter Name Generator
+                <Link href="/generator" className="text-muted-foreground hover:text-primary transition-colors">
+                  Name Generator
                 </Link>
               </li>
               <li>
@@ -39,17 +40,26 @@ export function Footer() {
             <h3 className="font-semibold mb-3">Resources</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link href="/resources" className="text-muted-foreground hover:text-primary transition-colors">
+                <Link
+                  href="/blog?category=learning"
+                  className="text-muted-foreground hover:text-primary transition-colors"
+                >
                   Learning Center
                 </Link>
               </li>
               <li>
-                <Link href="/resources" className="text-muted-foreground hover:text-primary transition-colors">
+                <Link
+                  href="/blog?category=best-practices"
+                  className="text-muted-foreground hover:text-primary transition-colors"
+                >
                   Best Practices
                 </Link>
               </li>
               <li>
-                <Link href="/resources" className="text-muted-foreground hover:text-primary transition-colors">
+                <Link
+                  href="/blog?category=templates"
+                  className="text-muted-foreground hover:text-primary transition-colors"
+                >
                   Templates
                 </Link>
               </li>
@@ -85,4 +95,3 @@ export function Footer() {
     </footer>
   )
 }
-

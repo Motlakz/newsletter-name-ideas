@@ -4,7 +4,6 @@ import { OpenAI } from "openai"
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true
 })
 
 const API_LAYER_KEY = process.env.API_LAYER_KEY;
