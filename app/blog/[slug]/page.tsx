@@ -9,20 +9,29 @@ import { Calendar, Tag, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { GlassCard, GlassCardContent } from "@/components/ui/glass-card"
+import { z } from "zod"
 
 const ReactMarkdown = dynamic(() => import("react-markdown"))
 
 const FALLBACK_IMAGE =
   "https://images.pexels.com/photos/2014422/pexels-photo-2014422.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=627&w=1200"
 
-// ✅ Correct param typing for generateMetadata
+// ✅ Define and use a Zod schema for the `params`
+const ParamsSchema = z.object({
+  slug: z.string(),
+})
+
+type RouteParams = z.infer<typeof ParamsSchema>
+
 export async function generateMetadata({
   params,
 }: {
-  params: { slug: string }
+  params: RouteParams
 }): Promise<Metadata> {
-  const post = await getPostBySlug(params.slug)
+  const parsed = ParamsSchema.safeParse(params)
+  if (!parsed.success) return { title: "Invalid Post", description: "Invalid parameters." }
 
+  const post = await getPostBySlug(parsed.data.slug)
   if (!post) {
     return {
       title: "Post Not Found",
@@ -36,14 +45,17 @@ export async function generateMetadata({
   }
 }
 
-// ✅ Correct param typing for the route handler
 export default async function BlogPostPage({
   params,
 }: {
-  params: { slug: string }
+  params: unknown
 }) {
-  const post = await getPostBySlug(params.slug)
+  const parsed = ParamsSchema.safeParse(params)
+  if (!parsed.success) notFound()
 
+  const { slug } = parsed.data
+
+  const post = await getPostBySlug(slug)
   if (!post) notFound()
 
   let coverImage = post.coverImage || FALLBACK_IMAGE
@@ -54,7 +66,7 @@ export default async function BlogPostPage({
   if (!post.coverImage) {
     try {
       const searchQuery = [post.category, ...post.tags.slice(0, 2)].join(" ")
-      const pexelsData = await getPexelsImage(searchQuery, params.slug)
+      const pexelsData = await getPexelsImage(searchQuery, slug)
       coverImage = pexelsData.imageUrl
       photographer = pexelsData.photographer
       photographerUrl = pexelsData.photographerUrl
@@ -65,7 +77,6 @@ export default async function BlogPostPage({
   }
 
   let cleanedContent = post.content
-
   const titlePattern = new RegExp(`^# ${post.title}`, "i")
   if (titlePattern.test(cleanedContent)) {
     cleanedContent = cleanedContent.replace(titlePattern, "")
