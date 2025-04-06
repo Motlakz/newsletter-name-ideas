@@ -41,7 +41,7 @@ export async function generateMetadata(
 // Default fallback image that's guaranteed to exist
 const FALLBACK_IMAGE = "https://images.pexels.com/photos/2014422/pexels-photo-2014422.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=627&w=1200";
 
-const BlogPostPage = async ({ params }: Props) => {
+export async function BlogPostPage({ params }: Props) {
     const post = await getPostBySlug(params.slug)
     if (!post) notFound()
 
