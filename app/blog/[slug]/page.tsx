@@ -12,18 +12,14 @@ import { getPexelsImage } from "@/lib/pexels/pexels"
 
 const ReactMarkdown = dynamic(() => import("react-markdown"))
 
-// Default fallback image
-const FALLBACK_IMAGE = "https://images.pexels.com/photos/2014422/pexels-photo-2014422.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=627&w=1200"
+const FALLBACK_IMAGE =
+  "https://images.pexels.com/photos/2014422/pexels-photo-2014422.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=627&w=1200"
 
-type RouteParams = {
-  params: {
-    slug: string
-  }
-}
-
-export async function generateMetadata(
-  { params }: RouteParams
-): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: {
+  params: { slug: string }
+}): Promise<Metadata> {
   const post = await getPostBySlug(params.slug)
 
   if (!post) {
@@ -39,20 +35,24 @@ export async function generateMetadata(
   }
 }
 
-export default async function BlogPostPage({ params }: RouteParams) {
+export default async function BlogPostPage({
+  params,
+}: {
+  params: { slug: string }
+}) {
   const post = await getPostBySlug(params.slug)
   if (!post) notFound()
 
-  // fallback image values
-  let coverImage: string = post.coverImage || FALLBACK_IMAGE
-  let photographer = ''
-  let photographerUrl = ''
-  let imageAlt = post.title || 'Blog post image'
+  let coverImage = post.coverImage || FALLBACK_IMAGE
+  let photographer = ""
+  let photographerUrl = ""
+  let imageAlt = post.title || "Blog post image"
 
-  // Get a fallback image from Pexels if no coverImage exists
   if (!post.coverImage) {
     try {
-      const searchQuery = [post.category, ...post.tags.slice(0, 2)].filter(Boolean).join(' ')
+      const searchQuery = [post.category, ...post.tags.slice(0, 2)]
+        .filter(Boolean)
+        .join(" ")
       const pexelsData = await getPexelsImage(searchQuery, params.slug)
 
       coverImage = pexelsData.imageUrl
@@ -60,11 +60,10 @@ export default async function BlogPostPage({ params }: RouteParams) {
       photographerUrl = pexelsData.photographerUrl
       imageAlt = pexelsData.alt || imageAlt
     } catch (error) {
-      console.error('Failed to get Pexels image:', error)
+      console.error("Failed to get Pexels image:", error)
     }
   }
 
-  // Clean up markdown content
   let cleanedContent = post.content
 
   const titlePattern = new RegExp(`^# ${post.title}`, "i")
@@ -72,7 +71,10 @@ export default async function BlogPostPage({ params }: RouteParams) {
     cleanedContent = cleanedContent.replace(titlePattern, "")
   }
 
-  cleanedContent = cleanedContent.replace(/^(Tags|Category|Excerpt):.*?\n+/gim, "")
+  cleanedContent = cleanedContent.replace(
+    /^(Tags|Category|Excerpt):.*?\n+/gim,
+    ""
+  )
   cleanedContent = cleanedContent.replace(/\n\n+/g, "\n\n")
 
   return (
@@ -123,7 +125,13 @@ export default async function BlogPostPage({ params }: RouteParams) {
               />
               {photographer && (
                 <div className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
-                  Photo by <Link href={photographerUrl} className="underline" target="_blank" rel="noopener noreferrer">
+                  Photo by{" "}
+                  <Link
+                    href={photographerUrl}
+                    className="underline"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     {photographer}
                   </Link>
                 </div>
