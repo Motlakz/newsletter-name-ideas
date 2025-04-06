@@ -12,12 +12,20 @@ import { getPexelsImage } from "@/lib/pexels/pexels"
 
 const ReactMarkdown = dynamic(() => import("react-markdown"))
 
-export async function generateMetadata({
-    params,
-}: {
-    params: { slug: string }
-}): Promise<Metadata> {
-    const post = await getPostBySlug(params.slug);
+type GenerateMetadataProps = {
+    params: { slug: string };
+    searchParams: Record<string, string | string[] | undefined>;
+}
+
+type PageProps = {
+    params: { slug: string };
+    searchParams: Record<string, string | string[] | undefined>;
+}
+
+export async function generateMetadata(
+    props: GenerateMetadataProps
+): Promise<Metadata> {
+    const post = await getPostBySlug(props.params.slug);
 
     if (!post) {
         return {
@@ -35,11 +43,8 @@ export async function generateMetadata({
 // Default fallback image that's guaranteed to exist
 const FALLBACK_IMAGE = "https://images.pexels.com/photos/2014422/pexels-photo-2014422.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=627&w=1200";
 
-export default async function BlogPostPage({
-    params,
-}: {
-    params: { slug: string }
-}) {
+export default async function BlogPostPage(props: PageProps) {
+    const { params } = props;
     const post = await getPostBySlug(params.slug)
     if (!post) notFound()
 
