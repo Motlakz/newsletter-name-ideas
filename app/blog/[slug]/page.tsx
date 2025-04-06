@@ -12,20 +12,10 @@ import { getPexelsImage } from "@/lib/pexels/pexels"
 
 const ReactMarkdown = dynamic(() => import("react-markdown"))
 
-type GenerateMetadataProps = {
-    params: { slug: string };
-    searchParams: Record<string, string | string[] | undefined>;
-}
-
-type PageProps = {
-    params: { slug: string };
-    searchParams: Record<string, string | string[] | undefined>;
-}
-
 export async function generateMetadata(
-    props: GenerateMetadataProps
+    { params }: { params: { slug: string } },
 ): Promise<Metadata> {
-    const post = await getPostBySlug(props.params.slug);
+    const post = await getPostBySlug(params.slug);
 
     if (!post) {
         return {
@@ -43,10 +33,14 @@ export async function generateMetadata(
 // Default fallback image that's guaranteed to exist
 const FALLBACK_IMAGE = "https://images.pexels.com/photos/2014422/pexels-photo-2014422.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=627&w=1200";
 
-export default async function BlogPostPage(props: PageProps) {
-    const { params } = props;
-    const post = await getPostBySlug(params.slug)
-    if (!post) notFound()
+export default async function BlogPostPage({
+    params,
+}: {
+    params: Promise<{ slug: string }>
+}) {
+    const resolvedParams = await params;
+    const post = await getPostBySlug(resolvedParams.slug);
+    if (!post) notFound();
 
     // fallback values
     let coverImage: string = post.coverImage || FALLBACK_IMAGE;
@@ -60,7 +54,7 @@ export default async function BlogPostPage(props: PageProps) {
             // Create a more targeted search query combining category and tags
             const searchQuery = [post.category, ...post.tags.slice(0, 2)].filter(Boolean).join(' ');
             
-            const pexelsData = await getPexelsImage(searchQuery, params.slug);
+            const pexelsData = await getPexelsImage(searchQuery, resolvedParams.slug);
             
             coverImage = pexelsData.imageUrl;
             photographer = pexelsData.photographer;
