@@ -5,61 +5,79 @@ import { GlassCard, GlassCardContent } from "@/components/ui/glass-card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Calendar, Tag, ArrowLeft } from "lucide-react"
-import { getPostBySlug } from "@/lib/blog"
+import { getPostBySlug } from "@/lib/blog/blog"
 import type { Metadata } from "next"
 import dynamic from "next/dynamic"
+import { getPexelsImage } from "@/lib/pexels/pexels"
 
-// Dynamically import ReactMarkdown to avoid SSR issues
 const ReactMarkdown = dynamic(() => import("react-markdown"))
-
 interface BlogPostPageProps {
     params: {
-        slug: string
-    }
+        slug: string;
+    };
 }
 
 export async function generateMetadata({ params }: BlogPostPageProps): Promise<Metadata> {
-    const post = await getPostBySlug(params.slug)
+    const post = await getPostBySlug(params.slug);
 
     if (!post) {
         return {
             title: "Post Not Found",
             description: "The requested blog post could not be found.",
-        }
+        };
     }
 
-        return {
-            title: `${post.title} | Newsletter Learning Center`,
-            description: post.excerpt,
-        }
-    }
+    return {
+        title: `${post.title} | Newsletter Learning Center`,
+        description: post.excerpt,
+    };
+}
+
+// Default fallback image that's guaranteed to exist
+const FALLBACK_IMAGE = "https://images.pexels.com/photos/2014422/pexels-photo-2014422.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=627&w=1200";
 
 export default async function BlogPostPage({ params }: BlogPostPageProps) {
     const post = await getPostBySlug(params.slug)
+    if (!post) notFound()
 
-    if (!post) {
-        notFound()
+    // fallback values
+    let coverImage: string = post.coverImage || FALLBACK_IMAGE;
+    let photographer = '';
+    let photographerUrl = '';
+    let imageAlt = post.title || 'Blog post image';
+
+    // Only fetch a new image if the post doesn't have a cover image
+    if (!post.coverImage) {
+        try {
+            // Create a more targeted search query combining category and tags
+            const searchQuery = [post.category, ...post.tags.slice(0, 2)].filter(Boolean).join(' ');
+            
+            const pexelsData = await getPexelsImage(searchQuery, params.slug);
+            
+            coverImage = pexelsData.imageUrl;
+            photographer = pexelsData.photographer;
+            photographerUrl = pexelsData.photographerUrl;
+            imageAlt = pexelsData.alt || imageAlt;
+        } catch (error) {
+            console.error('Failed to get Pexels image:', error);
+            // Fallback already set in initialization
+        }
     }
 
     // Clean the content to ensure proper formatting
-    let cleanedContent = post.content
+    let cleanedContent = post.content;
 
     // If the content begins with the post title, remove it
-    const titlePattern = new RegExp(`^# ${post.title}`, "i")
+    const titlePattern = new RegExp(`^# ${post.title}`, "i");
     if (titlePattern.test(cleanedContent)) {
-        cleanedContent = cleanedContent.replace(titlePattern, "")
+        cleanedContent = cleanedContent.replace(titlePattern, "");
     }
 
     // Remove any metadata blocks at the beginning
-    cleanedContent = cleanedContent.replace(/^(Tags|Category|Excerpt):.*?\n+/gim, "")
+    cleanedContent = cleanedContent.replace(/^(Tags|Category|Excerpt):.*?\n+/gim, "");
 
     // Ensure proper paragraph spacing
-    cleanedContent = cleanedContent.replace(/\n\n+/g, "\n\n")
-
-    // Generate a default cover image if none is provided
-    const coverImage =
-        post.coverImage ||
-        `https://source.unsplash.com/random/1200x630/?${encodeURIComponent(post.category.toLowerCase())}+newsletter`
+    cleanedContent = cleanedContent.replace(/\n\n+/g, "\n\n");
 
     return (
         <div className="bg-background">
@@ -98,9 +116,22 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                     </div>
 
                     <GlassCard>
-                        {/* Cover Image */}
-                        <div className="w-full h-[300px] relative rounded-t-lg overflow-hidden">
-                            <Image src={coverImage || "/placeholder.svg"} alt={post.title} fill className="object-cover" priority />
+                        <div className="w-full h-[300px] relative rounded-t-lg overflow-hidden mb-8">
+                            <Image 
+                                src={coverImage} 
+                                alt={imageAlt}
+                                fill 
+                                className="object-cover" 
+                                priority 
+                                sizes="(max-width: 768px) 100vw, 80vw"
+                            />
+                            {photographer && (
+                                <div className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                                    Photo by <Link href={photographerUrl} className="underline" target="_blank" rel="noopener noreferrer">
+                                        {photographer}
+                                    </Link>
+                                </div>
+                            )}
                         </div>
                         <GlassCardContent className="p-8 prose dark:prose-invert max-w-none">
                             <ReactMarkdown>{cleanedContent}</ReactMarkdown>

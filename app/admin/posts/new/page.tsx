@@ -5,15 +5,12 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
 import { GlassCard, GlassCardContent, GlassCardHeader, GlassCardFooter } from "@/components/ui/glass-card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { isAuthenticated } from "@/lib/admin-auth"
-import { createPost } from "@/lib/blog"
-import { Save, ArrowLeft, ImageIcon } from "lucide-react"
+import { createPost } from "@/lib/blog/blog"
+import { Save, ArrowLeft } from "lucide-react"
+import BlogPostForm from "@/components/common/blog-post-form"
+import RichTextEditor from "@/components/common/rich-text-editor"
 
 const categories = ["Strategy", "Design", "Growth", "Monetization", "Technology", "Content"]
 
@@ -100,88 +97,23 @@ export default function NewPostPage() {
             <GlassCardHeader>
               <h2 className="text-xl font-semibold">Post Details</h2>
             </GlassCardHeader>
-            <GlassCardContent>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="title">Title</Label>
-                  <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} required />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="slug">Slug</Label>
-                  <Input id="slug" value={slug} onChange={(e) => setSlug(e.target.value)} required />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="coverImage">Cover Image URL</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="coverImage"
-                      value={coverImage}
-                      onChange={(e) => setCoverImage(e.target.value)}
-                      placeholder="https://example.com/image.jpg"
-                      className="flex-1"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        const randomImage = `https://source.unsplash.com/random/1200x630/?${encodeURIComponent(category.toLowerCase())}+newsletter`
-                        setCoverImage(randomImage)
-                      }}
-                    >
-                      <ImageIcon className="h-4 w-4 mr-2" />
-                      Random
-                    </Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground">Leave empty to use a default image based on category</p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="excerpt">Excerpt</Label>
-                  <Textarea
-                    id="excerpt"
-                    value={excerpt}
-                    onChange={(e) => setExcerpt(e.target.value)}
-                    required
-                    className="min-h-[100px]"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="category">Category</Label>
-                    <Select value={category} onValueChange={setCategory}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.map((cat) => (
-                          <SelectItem key={cat} value={cat}>
-                            {cat}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="tags">Tags (comma separated)</Label>
-                    <Input
-                      id="tags"
-                      value={tags}
-                      onChange={(e) => setTags(e.target.value)}
-                      placeholder="tag1, tag2, tag3"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Switch id="published" checked={published} onCheckedChange={setPublished} />
-                  <Label htmlFor="published">Publish immediately</Label>
-                </div>
-              </div>
-            </GlassCardContent>
+            <BlogPostForm 
+              title={title}
+              setTitle={setTitle}
+              slug={slug}
+              setSlug={setSlug}
+              coverImage={coverImage}
+              setCoverImage={setCoverImage}
+              excerpt={excerpt}
+              setExcerpt={setExcerpt}
+              category={category}
+              setCategory={setCategory}
+              tags={tags}
+              setTags={setTags}
+              published={published}
+              setPublished={setPublished}
+              categories={categories}
+            />
           </GlassCard>
 
           <GlassCard>
@@ -189,16 +121,11 @@ export default function NewPostPage() {
               <h2 className="text-xl font-semibold">Content</h2>
             </GlassCardHeader>
             <GlassCardContent>
-              <div className="space-y-2">
-                <Label htmlFor="content">Content (Markdown supported)</Label>
-                <Textarea
-                  id="content"
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  required
-                  className="min-h-[400px] font-mono"
-                />
-              </div>
+              <RichTextEditor 
+                content={content} 
+                onChange={setContent}
+                placeholder="Write your blog post content here..."
+              />
             </GlassCardContent>
             <GlassCardFooter className="flex justify-end">
               <Button

@@ -6,13 +6,17 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { GlassCard, GlassCardContent, GlassCardHeader } from "@/components/ui/glass-card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Globe, Search, CheckCircle, XCircle, Loader } from "lucide-react"
+import { Globe, Search, CheckCircle, XCircle, Loader, AlertTriangle } from "lucide-react"
 import { checkDomainAvailability, checkSocialMediaHandles, checkTLDAvailability, generateNames } from '@/lib/actions'
 
 type DomainResult = {
-  domain: string
-  available: boolean
+  domain: string;
+  available: boolean;
+  error?: {
+    message: string;
+    code?: string;
+  } | null;
+  isPlatform: boolean;
 }
 
 type GeneratedName = {
@@ -25,7 +29,6 @@ type GeneratedName = {
 
 export default function ToolsPage() {
   const [domainName, setDomainName] = useState('')
-  const [selectedTld, setSelectedTld] = useState('.com')
   const [domainResults, setDomainResults] = useState<DomainResult[]>([])
   const [seoName, setSeoName] = useState('')
   const [generatedNames, setGeneratedNames] = useState<GeneratedName[]>([])
@@ -41,33 +44,169 @@ export default function ToolsPage() {
   const handleDomainCheck = async () => {
     startTransition(async () => {
       try {
-        const baseName = domainName.replace(/\..*$/, ''); // Remove any existing TLD
-        const tldsToCheck = [selectedTld, '.io', '.co', '.net', '.org']
-          .filter((tld, index, self) => self.indexOf(tld) === index); // Remove duplicates
+        // Input validation
+        if (!domainName.trim()) {
+          throw new Error("Please enter a domain name");
+        }
   
-        // Check all TLDs including selected one
-        const results = await Promise.all(
-          tldsToCheck.map(async (tld) => {
-            if (tld === '.com') {
-              // Use original server action for .com
-              const result = await checkDomainAvailability(baseName);
-              return { domain: `${baseName}.com`, available: result.available };
-            } else {
-              // Use new server action for other TLDs
-              const result = await checkTLDAvailability(baseName, tld);
-              return result;
+        const baseName = domainName.trim().toLowerCase().replace(/\..*$/, ''); // Remove any existing TLD
+        
+        // Validate domain name format
+        const domainRegex = /^[a-z0-9-]+$/;
+        if (!domainRegex.test(baseName)) {
+          throw new Error("Domain name can only contain letters, numbers, and hyphens");
+        }
+  
+        if (baseName.length < 1 || baseName.length > 63) {
+          throw new Error("Domain name must be between 1 and 63 characters");
+        }
+  
+        // Define all TLDs to check, including newsletter platforms
+        const tldsToCheck = [
+          ".com",
+          ".io",
+          ".co",
+          ".net",
+          ".org",
+          ".dev",
+          ".app",
+          ".substack.com",
+        ].filter((tld, index, self) => self.indexOf(tld) === index); // Remove duplicates
+  
+        // Check all TLDs with proper error handling
+        const results = await Promise.allSettled(
+          tldsToCheck.map(async (tld): Promise<DomainResult> => {
+            try {
+              // Special handling for newsletter platforms
+              if (tld === '.substack.com' || tld === '.beehiiv.com') {
+                const platformDomain = `${baseName}${tld}`;
+                const url = tld === '.substack.com' 
+                  ? `https://substack.com/${baseName}`
+                  : `https://${baseName}.beehiiv.com`;
+  
+                try {
+                  const response = await fetch(url, {
+                    method: 'HEAD', // Use HEAD request to minimize data transfer
+                    cache: 'no-store', // Prevent caching
+                    headers: {
+                      'User-Agent': 'Mozilla/5.0', // Some platforms might block requests without proper UA
+                    },
+                  });
+  
+                  // For these platforms, a 404 typically means the subdomain is available
+                  return {
+                    domain: platformDomain,
+                    available: response.status === 404,
+                    error: null,
+                    isPlatform: true
+                  };
+                } catch (error) {
+                  // Network errors or CORS issues might indicate we can't check reliably
+                  return {
+                    domain: platformDomain,
+                    available: false,
+                    error: {
+                      message: `Unable to verify ${tld} availability`,
+                      code: 'PLATFORM_CHECK_FAILED'
+                    },
+                    isPlatform: true
+                  };
+                }
+              } else if (tld === '.com') {
+                // Use original server action for .com
+                const result = await checkDomainAvailability(baseName);
+                return {
+                  domain: `${baseName}.com`,
+                  available: result.available,
+                  error: null,
+                  isPlatform: false
+                };
+              } else {
+                // Use TLD server action for other TLDs
+                const result = await checkTLDAvailability(baseName, tld);
+                return {
+                  domain: `${baseName}${tld}`,
+                  available: result.available,
+                  error: null,
+                  isPlatform: false
+                };
+              }
+            } catch (error) {
+              // Type guard for error handling
+              const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+              
+              return {
+                domain: `${baseName}${tld}`,
+                available: false,
+                error: {
+                  message: errorMessage,
+                  code: error instanceof Error && 'code' in error ? (error as any).code : 'CHECK_FAILED'
+                },
+                isPlatform: tld === '.substack.com' || tld === '.beehiiv.com'
+              };
             }
           })
         );
   
-        // Sort results with selected TLD first
-        const sortedResults = results.sort((a, b) => 
-          a.domain.endsWith(selectedTld) ? -1 : 1
-        );
+        // Process results and handle errors
+        const processedResults: DomainResult[] = results.map((result, index) => {
+          if (result.status === 'fulfilled') {
+            return result.value;
+          } else {
+            return {
+              domain: `${baseName}${tldsToCheck[index]}`,
+              available: false,
+              error: {
+                message: 'Failed to check domain availability',
+                code: 'CHECK_FAILED'
+              },
+              isPlatform: tldsToCheck[index] === '.substack.com' || tldsToCheck[index] === '.beehiiv.com'
+            };
+          }
+        });
+  
+        // Sort results with .com first, then platforms, then others
+        const sortedResults = processedResults.sort((a, b) => {
+          // Priority 1: .com comes first
+          if (a.domain.endsWith('.com') && !a.isPlatform) return -1;
+          if (b.domain.endsWith('.com') && !b.isPlatform) return 1;
+
+          // Priority 2: Platform domains come next
+          if (a.isPlatform && !b.isPlatform) return -1;
+          if (!a.isPlatform && b.isPlatform) return 1;
+
+          // Priority 3: Common TLDs (.io, .co, .net, .org) come next
+          const commonTlds = ['.io', '.co', '.net', '.org'];
+          const aIsCommon = commonTlds.some(tld => a.domain.endsWith(tld));
+          const bIsCommon = commonTlds.some(tld => b.domain.endsWith(tld));
+          if (aIsCommon && !bIsCommon) return -1;
+          if (!aIsCommon && bIsCommon) return 1;
+
+          // Priority 4: Errors go to the bottom within their groups
+          if (a.error && !b.error) return 1;
+          if (!a.error && b.error) return -1;
+
+          // Priority 5: Available domains come before unavailable ones
+          if (a.available && !b.available) return -1;
+          if (!a.available && b.available) return 1;
+
+          return 0;
+        });
   
         setDomainResults(sortedResults);
       } catch (error) {
         console.error('Domain check failed:', error);
+        // Show user-friendly error message
+        const errorMessage = error instanceof Error ? error.message : 'Failed to check domain availability';
+        setDomainResults([{
+          domain: domainName,
+          available: false,
+          error: {
+            message: errorMessage,
+            code: 'CHECK_FAILED'
+          },
+          isPlatform: false
+        }]);
       }
     });
   };
@@ -134,10 +273,9 @@ export default function ToolsPage() {
                   </p>
                 </GlassCardHeader>
                 <GlassCardContent>
-                  <div className="space-y-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="domain-name">Domain Name</Label>
-                      <div className="flex gap-2">
+                  <div className="space-y-4">
+                    <Label htmlFor="domain-name" className="text-xl font-semibold">Newsletter Domain Name</Label>
+                    <div className="flex gap-2 sm:flex-row flex-col pb-4">
                       <Input
                         id="domain-name"
                         placeholder="yournewsletter"
@@ -148,73 +286,87 @@ export default function ToolsPage() {
                             .replace(/[^a-zA-Z0-9-]/g, ''); // Only allow valid domain characters
                           setDomainName(cleanName);
                         }}
-                        className="border-input/50 focus:border-primary"
+                        className="border-input/50 focus:border-primary w-full"
                       />
-                        <Select 
-                          value={selectedTld} 
-                          onValueChange={setSelectedTld}
-                        >
-                          <SelectTrigger className="w-[100px] border-input/50">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value=".com">.com</SelectItem>
-                            <SelectItem value=".io">.io</SelectItem>
-                            <SelectItem value=".co">.co</SelectItem>
-                            <SelectItem value=".net">.net</SelectItem>
-                            <SelectItem value=".org">.org</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      <Button 
+                        onClick={handleDomainCheck}
+                        disabled={isPending || !domainName}
+                        className="bg-gradient-to-r w-full sm:w-[300px] from-primary to-purple-400 hover:from-primary/90 hover:to-purple-400/90 text-white shadow-md hover:shadow-lg transition-all"
+                      >
+                        {isPending ? (
+                          <Loader className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Globe className="mr-2 h-4 w-4" />
+                        )}
+                        Check Domain Availability
+                      </Button>
                     </div>
-
-                    <Button 
-                      onClick={handleDomainCheck}
-                      disabled={isPending || !domainName}
-                      className="w-full bg-gradient-to-r from-primary to-purple-400 hover:from-primary/90 hover:to-purple-400/90 text-white shadow-md hover:shadow-lg transition-all"
-                    >
-                      {isPending ? (
-                        <Loader className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Globe className="mr-2 h-4 w-4" />
-                      )}
-                      Check Availability
-                    </Button>
 
                     {domainResults.length > 0 && (
                       <div className="mt-8 space-y-4">
                         <h3 className="text-xl font-semibold">Domain Suggestions</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          {domainResults.map((result) => (
-                            <div 
-                              key={result.domain}
-                              className={`flex items-center justify-between p-3 border rounded-md ${
-                                result.available 
+                        {domainResults.map((result) => (
+                          <div 
+                            key={result.domain}
+                            className={`flex items-center justify-between p-3 border rounded-md ${
+                              result.error
+                                ? 'bg-yellow-100/50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-900/50'
+                                : result.available 
                                   ? 'bg-green-100/50 dark:bg-green-900/20 border-green-200 dark:border-green-900/50'
                                   : 'bg-red-100/50 dark:bg-red-900/20 border-red-200 dark:border-red-900/50'
-                              }`}
-                            >
-                              <div className="flex items-center">
-                                {result.available ? (
-                                  <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                                ) : (
-                                  <XCircle className="h-5 w-5 text-red-500 mr-2" />
-                                )}
-                                <span>{result.domain}</span>
-                              </div>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                disabled={!result.available}
-                                className={result.available 
-                                  ? "border-green-500 text-green-700 dark:text-green-400"
-                                  : "border-red-500 text-red-700 dark:text-red-400"
-                                }
-                              >
-                                {result.available ? 'Available' : 'Taken'}
-                              </Button>
+                            }`}
+                          >
+                            <div className="flex items-center space-x-2">
+                              {result.error ? (
+                                <>
+                                  <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                                  <div className="flex flex-col">
+                                    <span className="text-sm font-medium">{result.domain}</span>
+                                    <span className="text-xs text-yellow-600 dark:text-yellow-400">
+                                      {result.error.message}
+                                    </span>
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  {result.available ? (
+                                    <CheckCircle className="h-5 w-5 text-green-500" />
+                                  ) : (
+                                    <XCircle className="h-5 w-5 text-red-500" />
+                                  )}
+                                  <div className="flex flex-col">
+                                    <span className="text-sm font-medium">{result.domain}</span>
+                                    {result.isPlatform && (
+                                      <span className="text-xs text-muted-foreground">
+                                        Newsletter Platform
+                                      </span>
+                                    )}
+                                  </div>
+                                </>
+                              )}
                             </div>
-                          ))}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={!result.available || !!result.error}
+                              className={
+                                result.error
+                                  ? "border-yellow-500 text-yellow-700 dark:text-yellow-400"
+                                  : result.available 
+                                    ? "border-green-500 text-green-700 dark:text-green-400"
+                                    : "border-red-500 text-red-700 dark:text-red-400"
+                              }
+                            >
+                              {result.error 
+                                ? 'Check Failed' 
+                                : result.available 
+                                  ? 'Available' 
+                                  : 'Taken'
+                              }
+                            </Button>
+                          </div>
+                        ))}
                         </div>
                       </div>
                     )}
@@ -232,30 +384,32 @@ export default function ToolsPage() {
                   </p>
                 </GlassCardHeader>
                 <GlassCardContent>
-                  <div className="space-y-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="newsletter-name">Newsletter Name</Label>
+                  <div className="space-y-4">
+                    <Label htmlFor="newsletter-name" className="text-xl font-semibold">Newsletter Name</Label>
+
+                    <div className="flex gap-2 flex-col sm:flex-row pb-4">
                       <Input
                         id="newsletter-name"
                         placeholder="Enter your newsletter name"
                         value={seoName}
                         onChange={(e) => setSeoName(e.target.value)}
-                        className="border-input/50 focus:border-primary"
+                        className="w-full border-input/50 focus:border-primary"
                       />
-                    </div>
 
-                    <Button 
-                      onClick={handleSeoAnalysis}
-                      disabled={isPending || !seoName}
-                      className="w-full bg-gradient-to-r from-primary to-purple-400 hover:from-primary/90 hover:to-purple-400/90 text-white shadow-md hover:shadow-lg transition-all"
-                    >
-                      {isPending ? (
-                        <Loader className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Search className="mr-2 h-4 w-4" />
-                      )}
-                      Analyze SEO Potential
-                    </Button>
+                      <Button 
+                        onClick={handleSeoAnalysis}
+                        disabled={isPending || !seoName}
+                        className="w-full sm:w-[300px] bg-gradient-to-r from-primary to-purple-400 hover:from-primary/90 hover:to-purple-400/90 text-white shadow-md hover:shadow-lg transition-all"
+                      >
+                        {isPending ? (
+                          <Loader className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Search className="mr-2 h-4 w-4" />
+                        )}
+                        Analyze SEO Potential
+                      </Button>
+                    </div>
+                    
 
                     {generatedNames.length > 0 && (
                       <div className="mt-8 space-y-4">
@@ -301,10 +455,10 @@ export default function ToolsPage() {
                   </p>
                 </GlassCardHeader>
                 <GlassCardContent>
-                  <div className="space-y-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="handle-name">Handle Name</Label>
-                      <div className="flex">
+                  <div className="space-y-4">
+                    <Label htmlFor="handle-name" className="text-xl font-semibold">Handle Name</Label>
+                    <div className="flex items-center sm:flex-row flex-col gap-2 pb-4">
+                      <div className="flex w-full">
                         <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted/50 text-muted-foreground">
                           @
                         </span>
@@ -316,20 +470,19 @@ export default function ToolsPage() {
                           className="rounded-l-none border-input/50 focus:border-primary"
                         />
                       </div>
+                      <Button 
+                        onClick={handleSocialCheck}
+                        disabled={isPending || !handleName}
+                        className="w-full sm:w-[300px] bg-gradient-to-r from-primary to-purple-400 hover:from-primary/90 hover:to-purple-400/90 text-white shadow-md hover:shadow-lg transition-all"
+                      >
+                        {isPending ? (
+                          <Loader className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Search className="mr-2 h-4 w-4" />
+                        )}
+                        Check Social Media Availability
+                      </Button>
                     </div>
-
-                    <Button 
-                      onClick={handleSocialCheck}
-                      disabled={isPending || !handleName}
-                      className="w-full bg-gradient-to-r from-primary to-purple-400 hover:from-primary/90 hover:to-purple-400/90 text-white shadow-md hover:shadow-lg transition-all"
-                    >
-                      {isPending ? (
-                        <Loader className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Search className="mr-2 h-4 w-4" />
-                      )}
-                      Check Social Media Availability
-                    </Button>
 
                     {socialResults.length > 0 && (
                       <div className="mt-8 space-y-4">

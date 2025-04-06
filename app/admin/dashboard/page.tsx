@@ -9,8 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { FileText, Plus, Edit, Trash, RefreshCw, LogOut, Eye, EyeOff, Calendar } from "lucide-react"
 import { logout, isAuthenticated } from "@/lib/admin-auth"
-import { getAllPosts, deletePost, updatePost, type BlogPost } from "@/lib/blog"
-import { generateBlogPost, scheduleWeeklyBlogPost } from "@/lib/content-generator"
+import { getAllPosts, deletePost, updatePost, type BlogPost } from "@/lib/blog/blog"
+import { generateBlogPost, scheduleWeeklyBlogPost } from "@/lib/blog/content-generator"
 
 export default function AdminDashboard() {
   const router = useRouter()

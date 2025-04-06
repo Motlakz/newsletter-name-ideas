@@ -11,20 +11,13 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
-import { Loader, Star, RefreshCw, Filter, Heart, Sparkles, Check, X, Globe, Wand2, ListFilter } from "lucide-react"
+import { Loader, Star, RefreshCw, Filter, Heart, Sparkles, Check, X, Globe, Wand2, ListFilter, Type, Puzzle, Smile } from "lucide-react"
 import { generateNames, checkDomainAvailability } from "@/lib/actions"
 import { cn } from "@/lib/utils"
 import { motion, AnimatePresence } from "framer-motion"
+import { GeneratedName, TemplatePreset } from "@/types/templates"
 
-type NewsletterName = {
-  id: string
-  name: string
-  description: string
-  category: string
-  isFavorite: boolean
-}
-
-export default function NewsletterGenerator() {
+export default function NewsletterNameGenerator() {
   const [topic, setTopic] = useState("")
   const [audience, setAudience] = useState("")
   const [tone, setTone] = useState("Professional")
@@ -35,12 +28,13 @@ export default function NewsletterGenerator() {
   const [useEmojis, setUseEmojis] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [isCheckingDomain, setIsCheckingDomain] = useState(false)
-  const [names, setNames] = useState<NewsletterName[]>([])
-  const [favorites, setFavorites] = useState<NewsletterName[]>([])
+  const [names, setNames] = useState<GeneratedName[]>([])
+  const [favorites, setFavorites] = useState<GeneratedName[]>([])
   const [activeFilter, setActiveFilter] = useState("all")
   const [sortBy, setSortBy] = useState("default")
   const [activeTab, setActiveTab] = useState("generator")
   const [domainResults, setDomainResults] = useState<{ [key: string]: boolean }>({})
+  const [activeTemplate, setActiveTemplate] = useState<string>("")
 
   useEffect(() => {
     const storedFavorites = localStorage.getItem("newsletterFavorites")
@@ -90,7 +84,7 @@ export default function NewsletterGenerator() {
     }
   }
 
-  const toggleFavorite = (name: NewsletterName) => {
+  const toggleFavorite = (name: GeneratedName) => {
     if (favorites.some((fav) => fav.id === name.id)) {
       setFavorites(favorites.filter((fav) => fav.id !== name.id))
     } else {
@@ -176,6 +170,67 @@ export default function NewsletterGenerator() {
     return filtered
   }
 
+  const TEMPLATE_PRESETS: TemplatePreset[] = [
+    {
+      id: "alliteration",
+      label: "Alliteration",
+      icon: <Type className="h-5 w-5" />,
+    },
+    {
+      id: "noun-structure",
+      label: "Noun Style",
+      icon: <ListFilter className="h-5 w-5" />,
+    },
+    {
+      id: "wordplay",
+      label: "Wordplay",
+      icon: <Puzzle className="h-5 w-5" />,
+    },
+    {
+      id: "emoji",
+      label: "Emoji",
+      icon: <Smile className="h-5 w-5" />,
+    },
+  ]
+
+  const applyTemplate = (templateId: string) => {
+    setActiveTemplate(templateId)
+    
+    switch(templateId) {
+      case "alliteration":
+        setUseAlliteration(true)
+        setTone("Casual")
+        setKeywords((prev) => `${prev}, alliteration`.replace(/^, /, ''))
+        break
+        
+      case "noun-structure":
+        setTone("Professional")
+        setKeywords((prev) => `${prev}, Insider, Digest, Brief, Update`.replace(/^, /, ''))
+        break
+        
+      case "wordplay":
+        setTone("Humorous")
+        setKeywords((prev) => `${prev}, puns, wordplay, creative`.replace(/^, /, ''))
+        break
+        
+      case "emoji":
+        setUseEmojis(true)
+        setTone("Casual")
+        break
+        
+      default:
+        setActiveTemplate("")
+    }
+  }
+
+  const clearTemplate = () => {
+    setActiveTemplate("")
+    setUseAlliteration(false)
+    setUseEmojis(false)
+    setTone("Professional")
+    setKeywords("")
+  }
+
   return (
     <div className="max-w-4xl mx-auto">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -208,135 +263,189 @@ export default function NewsletterGenerator() {
         </TabsTrigger>
       </TabsList>
 
-        <TabsContent value="generator">
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-            <GlassCard className="border-primary/20">
-              <GlassCardHeader>
-                <h2 className="text-2xl font-semibold">Create Your Newsletter Name</h2>
-                <p className="text-muted-foreground">
-                  Fill in the details below to generate tailored newsletter name ideas
-                </p>
-              </GlassCardHeader>
-              <GlassCardContent>
-                <form onSubmit={handleSubmit} className="space-y-6">
+      <TabsContent value="generator">
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+          <GlassCard className="border-primary/20">
+            <GlassCardHeader>
+              <div className="flex justify-between items-start">
+                <div>
+                  <h2 className="text-2xl font-semibold">Create Your Newsletter Name</h2>
+                  <p className="text-muted-foreground">
+                    {activeTemplate ? 
+                      `Using ${TEMPLATE_PRESETS.find(t => t.id === activeTemplate)?.label} template` : 
+                      "Choose a template or start fresh"}
+                  </p>
+                </div>
+                {activeTemplate && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearTemplate}
+                    className="text-muted-foreground hover:text-primary"
+                  >
+                    Clear Template
+                  </Button>
+                )}
+              </div>
+            </GlassCardHeader>
+            <GlassCardContent>
+              <div className="mb-8">
+                <Label className="block mb-4">Naming Templates</Label>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {TEMPLATE_PRESETS.map((template) => (
+                    <Button
+                      key={template.id}
+                      variant={activeTemplate === template.id ? "default" : "outline"}
+                      className={`h-auto py-3 flex flex-col items-center gap-2 transition-all ${
+                        activeTemplate === template.id 
+                          ? "border-primary bg-primary/10 text-primary hover:bg-primary/20" 
+                          : "border-input/50 hover:border-primary/30 hover:bg-accent/50"
+                      }`}
+                      onClick={() => applyTemplate(template.id)}
+                    >
+                      <span className="text-primary">{template.icon}</span>
+                      <span className="text-sm">{template.label}</span>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="topic">Newsletter Topic *</Label>
+                  <Input
+                    id="topic"
+                    placeholder="e.g., Technology, Finance, Health, Marketing"
+                    value={topic}
+                    onChange={(e) => setTopic(e.target.value)}
+                    required
+                    className="border-input/50 focus:border-primary"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="topic">Newsletter Topic *</Label>
+                    <Label htmlFor="audience">Target Audience</Label>
                     <Input
-                      id="topic"
-                      placeholder="e.g., Technology, Finance, Health, Marketing"
-                      value={topic}
-                      onChange={(e) => setTopic(e.target.value)}
-                      required
+                      id="audience"
+                      placeholder="e.g., Professionals, Students, Parents"
+                      value={audience}
+                      onChange={(e) => setAudience(e.target.value)}
                       className="border-input/50 focus:border-primary"
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="audience">Target Audience</Label>
-                      <Input
-                        id="audience"
-                        placeholder="e.g., Professionals, Students, Parents"
-                        value={audience}
-                        onChange={(e) => setAudience(e.target.value)}
-                        className="border-input/50 focus:border-primary"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="tone">Preferred Tone</Label>
-                      <Select value={tone} onValueChange={setTone}>
-                        <SelectTrigger className="border-input/50 focus:border-primary">
-                          <SelectValue placeholder="Select tone" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Professional">Professional</SelectItem>
-                          <SelectItem value="Casual">Casual</SelectItem>
-                          <SelectItem value="Humorous">Humorous</SelectItem>
-                          <SelectItem value="Inspirational">Inspirational</SelectItem>
-                          <SelectItem value="Educational">Educational</SelectItem>
-                          <SelectItem value="Formal">Formal</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
                   <div className="space-y-2">
-                    <Label htmlFor="keywords">Keywords or Phrases to Include</Label>
-                    <Input
-                      id="keywords"
-                      placeholder="e.g., tech, insights, weekly, insider"
-                      value={keywords}
-                      onChange={(e) => setKeywords(e.target.value)}
-                      className="border-input/50 focus:border-primary"
+                    <Label htmlFor="tone">Preferred Tone</Label>
+                    <Select value={tone} onValueChange={setTone}>
+                      <SelectTrigger className="border-input/50 focus:border-primary">
+                        <SelectValue placeholder="Select tone" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Professional">Professional</SelectItem>
+                        <SelectItem value="Casual">Casual</SelectItem>
+                        <SelectItem value="Humorous">Humorous</SelectItem>
+                        <SelectItem value="Inspirational">Inspirational</SelectItem>
+                        <SelectItem value="Educational">Educational</SelectItem>
+                        <SelectItem value="Formal">Formal</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="keywords">Keywords or Phrases to Include</Label>
+                  <Input
+                    id="keywords"
+                    placeholder="e.g., tech, insights, weekly, insider"
+                    value={keywords}
+                    onChange={(e) => setKeywords(e.target.value)}
+                    className="border-input/50 focus:border-primary"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Name Length</Label>
+                  <div className="pt-2 px-2">
+                    <Slider
+                      defaultValue={nameLength}
+                      max={5}
+                      min={1}
+                      step={1}
+                      onValueChange={setNameLength}
+                      className="py-4"
                     />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Name Length</Label>
-                    <div className="pt-2 px-2">
-                      <Slider
-                        defaultValue={nameLength}
-                        max={5}
-                        min={1}
-                        step={1}
-                        onValueChange={setNameLength}
-                        className="py-4"
-                      />
-                      <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                        <span>Short</span>
-                        <span>Medium</span>
-                        <span>Long</span>
-                      </div>
+                    <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                      <span>Short</span>
+                      <span>Medium</span>
+                      <span>Long</span>
                     </div>
                   </div>
+                </div>
 
-                  <div className="flex flex-col sm:flex-row gap-4">
-                    <div className="flex items-center space-x-2">
-                      <Switch id="alliteration" checked={useAlliteration} onCheckedChange={setUseAlliteration} />
-                      <Label htmlFor="alliteration">Use Alliteration</Label>
-                    </div>
-
-                    <div className="flex items-center space-x-2">
-                      <Switch id="emojis" checked={useEmojis} onCheckedChange={setUseEmojis} />
-                      <Label htmlFor="emojis">Include Emojis</Label>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="additionalInfo">Additional Information</Label>
-                    <Textarea
-                      id="additionalInfo"
-                      placeholder="Any other details that might help generate better names..."
-                      value={additionalInfo}
-                      onChange={(e) => setAdditionalInfo(e.target.value)}
-                      className="border-input/50 focus:border-primary min-h-[100px]"
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="flex items-center space-x-2">
+                    <Switch 
+                      id="alliteration" 
+                      checked={useAlliteration} 
+                      onCheckedChange={(checked) => {
+                        setUseAlliteration(checked)
+                        if (!checked) setActiveTemplate("")
+                      }}
+                      disabled={activeTemplate === 'alliteration'}
                     />
+                    <Label htmlFor="alliteration">Use Alliteration</Label>
                   </div>
-                </form>
-              </GlassCardContent>
-              <GlassCardFooter className="flex justify-end">
-                <Button
-                  onClick={handleSubmit}
-                  disabled={isGenerating || !topic}
-                  className="bg-gradient-to-r from-primary to-purple-400 hover:from-primary/90 hover:to-purple-400/90 text-white shadow-md hover:shadow-lg transition-all"
-                >
-                  {isGenerating ? (
-                    <>
-                      <Loader className="mr-2 h-4 w-4 animate-spin" />
-                      Generating Ideas...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="mr-2 h-5 w-5" />
-                      Generate Newsletter Names
-                    </>
-                  )}
-                </Button>
-              </GlassCardFooter>
-            </GlassCard>
-          </motion.div>
-        </TabsContent>
+
+                  <div className="flex items-center space-x-2">
+                    <Switch 
+                      id="emojis" 
+                      checked={useEmojis} 
+                      onCheckedChange={(checked) => {
+                        setUseEmojis(checked)
+                        if (!checked) setActiveTemplate("")
+                      }}
+                      disabled={activeTemplate === 'emoji'}
+                    />
+                    <Label htmlFor="emojis">Include Emojis</Label>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="additionalInfo">Additional Information</Label>
+                  <Textarea
+                    id="additionalInfo"
+                    placeholder="Any other details that might help generate better names..."
+                    value={additionalInfo}
+                    onChange={(e) => setAdditionalInfo(e.target.value)}
+                    className="border-input/50 focus:border-primary min-h-[100px]"
+                  />
+                </div>
+
+                <GlassCardFooter className="flex justify-end px-0 pb-0">
+                  <Button
+                    type="submit"
+                    disabled={isGenerating || !topic}
+                    className="bg-gradient-to-r from-primary to-purple-400 hover:from-primary/90 hover:to-purple-400/90 text-white shadow-md hover:shadow-lg transition-all"
+                  >
+                    {isGenerating ? (
+                      <>
+                        <Loader className="mr-2 h-4 w-4 animate-spin" />
+                        Generating Ideas...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="mr-2 h-5 w-5" />
+                        Generate Newsletter Names
+                      </>
+                    )}
+                  </Button>
+                </GlassCardFooter>
+              </form>
+            </GlassCardContent>
+          </GlassCard>
+        </motion.div>
+      </TabsContent>
 
         <TabsContent value="results">
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>

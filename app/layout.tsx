@@ -5,6 +5,7 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
+import { Toaster } from "sonner"
 
 const quicksand = Quicksand({ subsets: ["latin"] })
 
@@ -59,6 +60,7 @@ export default function RootLayout({
             <main className="flex-1 pt-16">{children}</main>
             <Footer />
           </div>
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>

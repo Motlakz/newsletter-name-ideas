@@ -6,8 +6,7 @@ import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/mode-toggle"
-import { Sparkles } from "lucide-react"
-import Logo from "../logo"
+import Logo from "../common/logo"
 
 export function Header() {
   const pathname = usePathname()
@@ -24,7 +23,7 @@ export function Header() {
 
   const navItems = [
     { name: "Home", path: "/" },
-    { name: "Generator", path: "/generator" },
+    { name: "Generator", path: "/newsletter-name-generator" },
     { name: "Tools", path: "/tools" },
     { name: "Analytics", path: "/analytics" },
     { name: "Blog", path: "/blog" },
@@ -37,7 +36,7 @@ export function Header() {
         scrolled ? "bg-background/80 backdrop-blur-md border-b shadow-sm" : "bg-transparent",
       )}
     >
-      <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+      <div className="container mx-auto p-2 flex items-center justify-between">
         <Logo />
 
         <nav className="hidden md:flex items-center gap-6">
@@ -62,7 +61,7 @@ export function Header() {
             size="sm"
             className="bg-gradient-to-r from-primary to-purple-400 hover:from-primary/90 hover:to-purple-400/90 text-white"
           >
-            <Link href="/generator">Generate Names</Link>
+            <Link href="/newsletter-name-generator">Generate Names</Link>
           </Button>
         </div>
       </div>

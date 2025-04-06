@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ArrowRight, Calendar, Tag, BookOpen, FileText, Layout } from "lucide-react"
-import { GrResources } from "react-icons/gr";
+import { GrResources } from "react-icons/gr"
+import { getPexelsImage } from "@/lib/pexels/pexels"
 
 type CategoryMapping = {
   [key: string]: string;
@@ -46,12 +47,11 @@ type CategoryTitles = {
 
 export default function BlogContent({ initialPosts }: BlogContentProps) {
   const searchParams = useSearchParams()
-  const [posts, setPosts] = useState<BlogPost[]>(initialPosts || [])
-
   const categoryParam = searchParams.get("category")
   const initialTab = categoryParam && Object.keys(categoryMappings).includes(categoryParam) ? categoryParam : "all"
-
   const [activeTab, setActiveTab] = useState<string>(initialTab)
+  const [posts, setPosts] = useState<BlogPost[]>(initialPosts)
+  const [coverImages, setCoverImages] = useState<{[key: string]: string}>({})
 
   useEffect(() => {
     if (categoryParam && Object.keys(categoryMappings).includes(categoryParam)) {
@@ -61,32 +61,55 @@ export default function BlogContent({ initialPosts }: BlogContentProps) {
     }
   }, [categoryParam])
 
-  const getFilteredPosts = (category: string): BlogPost[] => {
-    if (category === "all") {
-      return posts
+  useEffect(() => {
+    const fetchCoverImages = async () => {
+      const newCoverImages: {[key: string]: string} = { ...coverImages }
+      
+      for (const post of posts) {
+        // Skip if post already has a cover image
+        if (post.coverImage) continue;
+        
+        // Skip if we already have a cover image for this post in our state
+        if (newCoverImages[post.id]) continue;
+        
+        try {
+          const searchQuery = [post.category, ...post.tags].join(' ')
+          const pexelsData = await getPexelsImage(searchQuery, post.slug)
+          newCoverImages[post.id] = pexelsData.imageUrl
+        } catch (error) {
+          newCoverImages[post.id] = `https://images.pexels.com/photos/2014422/pexels-photo-2014422.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=627&w=1200`
+        }
+      }
+      
+      setCoverImages(newCoverImages)
     }
 
+    // Only fetch cover images for posts that don't have them
+    if (posts.some(post => !post.coverImage && !coverImages[post.id])) {
+      fetchCoverImages()
+    }
+  }, [posts, coverImages])
+
+  const getFilteredPosts = (category: string): BlogPost[] => {
+    if (category === "all") return posts
+
     const mappedCategory = categoryMappings[category]
-    return posts.filter((post) => post.category === mappedCategory)
+    return posts.filter(post => post.category === mappedCategory)
   }
 
   const renderPostCard = (post: BlogPost): JSX.Element => (
     <GlassCard key={post.id} className="transition-all duration-300 hover:shadow-md overflow-hidden">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-0">
-        {/* Cover Image */}
         <div className="relative h-48 md:h-full">
           <Image
-            src={
-              post.coverImage ||
-              `https://source.unsplash.com/random/600x400/?${encodeURIComponent(post.category.toLowerCase())}+newsletter`
-            }
+            src={post.coverImage || coverImages[post.id] || '/placeholder.svg'}
             alt={post.title}
             fill
             className="object-cover"
+            sizes="(max-width: 768px) 100vw, 50vw"
           />
         </div>
 
-        {/* Content */}
         <div className="md:col-span-2">
           <GlassCardContent className="p-6">
             <div className="flex flex-col md:flex-row justify-between md:items-center mb-4">
@@ -136,26 +159,24 @@ export default function BlogContent({ initialPosts }: BlogContentProps) {
     all: "All Resources",
     learning: "Learning Center",
     "best-practices": "Best Practices",
-    templates: "Templates",
+    templates: "Templates"
   }
 
   return (
     <div className="max-w-4xl mx-auto">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mb-8">
-        <TabsList className="grid grid-cols-4 w-full">
+        <TabsList className="grid grid-cols-4 w-full mb-6">
           {Object.keys(categoryTitles).map((category) => (
             <TabsTrigger key={category} value={category} className="flex items-center">
               {categoryIcons[category]}
-              {category === "all" ? "All" : category.split("-").map(word => 
-                word.charAt(0).toUpperCase() + word.slice(1)
-              ).join(" ")}
+              {categoryTitles[category]}
             </TabsTrigger>
           ))}
         </TabsList>
 
         {Object.keys(categoryTitles).map((category) => (
           <TabsContent key={category} value={category}>
-            <div className="mb-8">
+            <div className="mb-4">
               {getFilteredPosts(category).length === 0 ? (
                 <div className="text-center py-12">
                   <p className="text-lg mb-4">No posts available in this category yet.</p>
@@ -164,7 +185,7 @@ export default function BlogContent({ initialPosts }: BlogContentProps) {
                   </Button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 gap-8">
+                <div className="grid grid-cols-1 gap-4">
                   {getFilteredPosts(category).map((post) => renderPostCard(post))}
                 </div>
               )}

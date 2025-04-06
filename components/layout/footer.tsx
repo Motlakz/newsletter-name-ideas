@@ -1,5 +1,5 @@
 import Link from "next/link"
-import Logo from "../logo"
+import Logo from "../common/logo"
 
 export function Footer() {
   return (
@@ -7,9 +7,9 @@ export function Footer() {
       <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="space-y-3">
-            <div className="flex items-center gap-2">
+            <Link href="/">
               <Logo />
-            </div>
+            </Link>
             <p className="text-sm text-muted-foreground">
               Generate creative, engaging, and memorable newsletter names for your audience
             </p>
@@ -19,7 +19,7 @@ export function Footer() {
             <h3 className="font-semibold mb-3">Features</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link href="/generator" className="text-muted-foreground hover:text-primary transition-colors">
+                <Link href="/newsletter-name-generator" className="text-muted-foreground hover:text-primary transition-colors">
                   Name Generator
                 </Link>
               </li>
@@ -57,7 +57,7 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="/blog?category=templates"
+                  href="/templates"
                   className="text-muted-foreground hover:text-primary transition-colors"
                 >
                   Templates
@@ -70,17 +70,17 @@ export function Footer() {
             <h3 className="font-semibold mb-3">Company</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link href="#" className="text-muted-foreground hover:text-primary transition-colors">
+                <Link href="/about" className="text-muted-foreground hover:text-primary transition-colors">
                   About
                 </Link>
               </li>
               <li>
-                <Link href="#" className="text-muted-foreground hover:text-primary transition-colors">
+                <Link href="/privacy" className="text-muted-foreground hover:text-primary transition-colors">
                   Privacy
                 </Link>
               </li>
               <li>
-                <Link href="#" className="text-muted-foreground hover:text-primary transition-colors">
+                <Link href="/terms" className="text-muted-foreground hover:text-primary transition-colors">
                   Terms
                 </Link>
               </li>

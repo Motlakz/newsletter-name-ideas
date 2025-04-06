@@ -1,5 +1,5 @@
 import { Suspense } from "react"
-import { getAllPosts } from "@/lib/blog"
+import { getAllPosts } from "@/lib/blog/blog"
 import BlogContent from "./blog-content"
 
 export default async function BlogPage() {

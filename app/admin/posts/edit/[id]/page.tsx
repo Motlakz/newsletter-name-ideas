@@ -12,8 +12,9 @@ import { Switch } from "@/components/ui/switch"
 import { GlassCard, GlassCardContent, GlassCardHeader, GlassCardFooter } from "@/components/ui/glass-card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { isAuthenticated } from "@/lib/admin-auth"
-import { getPostBySlug, updatePost, type BlogPost } from "@/lib/blog"
+import { getPostBySlug, updatePost, type BlogPost } from "@/lib/blog/blog"
 import { Save, ArrowLeft } from "lucide-react"
+import RichTextEditor from "@/components/common/rich-text-editor"
 
 const categories = ["Strategy", "Design", "Growth", "Monetization", "Technology", "Content"]
 
@@ -206,16 +207,11 @@ export default function EditPostPage() {
               <h2 className="text-xl font-semibold">Content</h2>
             </GlassCardHeader>
             <GlassCardContent>
-              <div className="space-y-2">
-                <Label htmlFor="content">Content (Markdown supported)</Label>
-                <Textarea
-                  id="content"
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  required
-                  className="min-h-[400px] font-mono"
-                />
-              </div>
+              <RichTextEditor 
+                content={content} 
+                onChange={setContent}
+                placeholder="Edit your blog post content here..."
+              />
             </GlassCardContent>
             <GlassCardFooter className="flex justify-end">
               <Button

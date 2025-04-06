@@ -1,5 +1,5 @@
 import { Suspense } from "react"
-import NewsletterGenerator from "@/components/newsletter-generator"
+import NewsletterGenerator from "@/components/newsletter-name-generator"
 import { Loader } from "lucide-react"
 
 export default function GeneratorPage() {

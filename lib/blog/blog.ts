@@ -2,7 +2,7 @@
 
 import fs from "fs"
 import path from "path"
-import { isAuthenticated } from "./admin-auth"
+import { isAuthenticated } from "../admin-auth"
 
 // In a real app, you would use a database
 // This is a simplified version using the file system

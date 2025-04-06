@@ -2,7 +2,7 @@
 
 import { OpenAI } from "openai"
 import { createPost } from "./blog"
-import { isAuthenticated } from "./admin-auth"
+import { isAuthenticated } from "../admin-auth"
 
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
