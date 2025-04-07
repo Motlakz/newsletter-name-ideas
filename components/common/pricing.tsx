@@ -5,7 +5,7 @@ import { Check, Globe2, Search, Users2, BarChart3, X, Sparkles } from 'lucide-re
 import { Button } from '@/components/ui/button'
 import { GlassCard } from '@/components/ui/glass-card'
 import { motion } from "framer-motion"
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Switch } from '../ui/switch'
 import { useUser } from "@/hooks/use-auth";
 import Script from "next/script";
@@ -90,9 +90,10 @@ const PricingToggle = ({ isAnnual, setIsAnnual }: PricingToggleProps) => {
 }
 
 export default function PricingComponent() {
-    const [isAnnual, setIsAnnual] = useState(false)
-    const router = useRouter();
-    const { user } = useUser()
+  const [scriptLoaded, setScriptLoaded] = useState(false);
+  const [isAnnual, setIsAnnual] = useState(false)
+  const router = useRouter();
+  const { user } = useUser()
 
     const getCheckoutUrl = (overlayId: string) => {
       const baseUrl = `https://scrape-sync.stage.fungies.net/checkout-element/${overlayId}`
@@ -131,6 +132,12 @@ export default function PricingComponent() {
         included: 'muse'
       }
     ]
+
+    useEffect(() => {
+      if (!OVERLAY_IDS.MUSE_MONTHLY || !OVERLAY_IDS.MUSE_ANNUAL || !OVERLAY_IDS.FORGE) {
+        console.error('Missing overlay IDs in environment variables');
+      }
+    }, []);
 
     const handleSubscribe = () => {
       router.push('/sign-up');
@@ -189,12 +196,13 @@ export default function PricingComponent() {
             </p>
             <Button
               className="mt-6 w-full"
+              disabled={!scriptLoaded}
               data-fungies-checkout-url={getCheckoutUrl(
                 isAnnual ? OVERLAY_IDS.MUSE_ANNUAL : OVERLAY_IDS.MUSE_MONTHLY
               )}
               data-fungies-mode="overlay"
             >
-              Subscribe to Muse
+              {scriptLoaded ? 'Subscribe to Muse' : 'Loading...'}
             </Button>
           </div>
         </GlassCard>
@@ -282,10 +290,15 @@ export default function PricingComponent() {
         </p>
       </div>
       <Script 
-        src='https://cdn.jsdelivr.net/npm/@fungies/fungies-js@0.0.6' 
-        defer 
-        data-auto-init
-      />
+          src='https://cdn.jsdelivr.net/npm/@fungies/fungies-js@0.0.6' 
+          defer 
+          data-auto-init
+          onLoad={() => setScriptLoaded(true)}
+          onError={(e) => {
+            console.error('Error loading Fungies script:', e);
+            setScriptLoaded(false);
+          }}
+        />
     </div>
   )
 }
