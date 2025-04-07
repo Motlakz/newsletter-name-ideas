@@ -16,7 +16,6 @@ import { purchasePlan } from "@/lib/plans/subscription";
 declare global {
   interface Window {
     Fungies?: {
-      init(): unknown;
       on: (event: string, callback: (data: any) => void) => void;
     };
   }
@@ -147,12 +146,6 @@ export default function PricingComponent() {
       const baseUrl = `https://scrape-sync.stage.fungies.net/checkout-element/${overlayId}`;
       return user?.$id ? `${baseUrl}?appwrite_user_id=${user.$id}` : baseUrl;
     };
-  
-    useEffect(() => {
-      if (scriptLoaded && window.Fungies) {
-        window.Fungies.init(); // Re-initialize after script loads or user changes
-      }
-    }, [scriptLoaded, user]);
   
     useEffect(() => {
       if (typeof window !== "undefined" && window.Fungies && selectedPlanId) {
