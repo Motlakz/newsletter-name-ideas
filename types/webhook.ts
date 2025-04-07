@@ -1,3 +1,33 @@
+export interface FungiesSubscription {
+    object: "subscription";
+    id: string;
+    status: string;
+    createdAt: number;
+    currentIntervalEnd: number;
+    currentIntervalStart: number;
+    cancelAtIntervalEnd: boolean;
+    canceledAt: number | null;
+    userId: string | null;
+    user: any | null;
+    orderId: string;
+    orderNumber: string;
+    order: {
+        object: "order";
+        id: string;
+        number: string;
+        status: string;
+    };
+    lastPaymentId: string | null;
+    lastPaymentNumber: string | null;
+    lastPayment: any | null;
+}
+export interface FungiesResponse {
+    status: string;
+    data: {
+        subscription: FungiesSubscription;
+    };
+}
+
 export interface WebhookPayloadData {
     user: {
         id: string;
@@ -36,56 +66,21 @@ export interface WebhookPayloadData {
         fee: number;
         tax: number;
         type: string;
-        user: {
-            id: string;
-            object: string;
-            username: string | null;
-        };
-        order: {
-            id: string;
-            number: string;
-            object: string;
-            status: string;
-        };
         value: number;
-        number: string;
-        object: string;
         status: string;
-        userId: string;
-        orderId: string;
         currency: string;
         createdAt: number;
+        orderId: string;
         orderNumber: string;
-        subscription: null;
-        subscriptionId: null;
         currencyDecimals: number;
     };
     subscription: {
         id: string;
-        user: {
-            id: string;
-            object: string;
-            username: string | null;
-        };
-        order: {
-            id: string;
-            number: string;
-            object: string;
-            status: string;
-        };
-        object: string;
         status: string;
         userId: string;
         orderId: string;
         createdAt: number;
         canceledAt: null;
-        lastPayment: {
-            id: string;
-            type: string;
-            number: string;
-            object: string;
-            status: string;
-        };
         orderNumber: string;
         lastPaymentId: string;
         lastPaymentNumber: string;

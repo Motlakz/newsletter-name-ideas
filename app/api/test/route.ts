@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { database, COLLECTIONS, DATABASES } from "@/lib/backend/appwrite";
 import { ID, Query } from "appwrite";
 import { verifySignature } from "@/lib/helper/verify";
-import { WebhookPayload } from "@/types/webhook";
+import { WebhookPayload, WebhookPayloadData } from "@/types/webhook";
 
 const WEBHOOK_SECRET = process.env.FUNGIES_TEST_WEBHOOK_SECRET;
 
@@ -26,21 +26,20 @@ export async function POST(req: Request) {
 
         // Step 2: Parse and validate payload
         const body: WebhookPayload = JSON.parse(payload);
-        const item = body.data.items[0];
         
         // Handle different webhook types
         switch (body.type) {
             case "subscription_created":
-                await handleSubscriptionCreated(body);
+                await handleSubscriptionCreated(body.data);
                 break;
             case "subscription_updated":
-                await handleSubscriptionUpdated(body);
+                await handleSubscriptionUpdated(body.data);
                 break;
             case "payment_success":
-                await handleOneTimePayment(body);
+                await handleOneTimePayment(body.data);
                 break;
             case "subscription_cancelled":
-                await handleSubscriptionCancelled(body);
+                await handleSubscriptionCancelled(body.data);
                 break;
             default:
                 console.log(`Unhandled webhook type: ${body.type}`);
@@ -62,8 +61,8 @@ export async function POST(req: Request) {
     }
 }
 
-async function handleSubscriptionCreated(body: WebhookPayload) {
-    const { user, subscription, lastPayment } = body.data;
+async function handleSubscriptionCreated(data: WebhookPayloadData) {
+    const { user, subscription, lastPayment } = data;
 
     // Find or create Appwrite user
     const appwriteUser = await resolveAppwriteUser(user.email);
@@ -80,12 +79,12 @@ async function handleSubscriptionCreated(body: WebhookPayload) {
             userId: appwriteUser.$id,
             subscriptionId: subscription.id,
             status: subscription.status,
-            planType: 'free', // or determine from the subscription data
+            planType: determinePlanType(data.items[0]?.product.type),
             startDate: new Date(subscription.currentIntervalStart).toISOString(),
             endDate: new Date(subscription.currentIntervalEnd).toISOString(),
-            lastPaymentId: lastPayment.id,
-            amount: lastPayment.value,
-            currency: lastPayment.currency,
+            lastPaymentId: lastPayment?.id,
+            amount: lastPayment?.value,
+            currency: lastPayment?.currency,
         }
     );
 
@@ -101,30 +100,24 @@ async function handleSubscriptionCreated(body: WebhookPayload) {
     );
 }
 
-async function handleSubscriptionUpdated(body: WebhookPayload) {
-    const { subscription, items } = body.data;
-    const item = items[0];
-    const productType = item.product.type;
+async function handleSubscriptionUpdated(data: WebhookPayloadData) {
+    const { subscription, items } = data;
+    const productType = items[0]?.product.type;
     
-    const [planType, interval] = productType.includes('annual') 
-        ? ['muse', 'annual'] 
-        : ['muse', 'monthly'];
-
     await database.updateDocument(
         DATABASES.MAIN,
         COLLECTIONS.SUBSCRIPTIONS,
         subscription.id,
         {
-            planType,
-            interval,
+            planType: determinePlanType(productType),
             status: subscription.status,
             endDate: new Date(subscription.currentIntervalEnd).toISOString()
         }
     );
 }
 
-async function handleOneTimePayment(body: WebhookPayload) {
-    const { user, lastPayment } = body.data;
+async function handleOneTimePayment(data: WebhookPayloadData) {
+    const { user, lastPayment } = data;
 
     // Find or create Appwrite user
     const appwriteUser = await resolveAppwriteUser(user.email);
@@ -143,7 +136,7 @@ async function handleOneTimePayment(body: WebhookPayload) {
             amount: lastPayment.value,
             currency: lastPayment.currency,
             status: lastPayment.status,
-            type: 'forge', // or determine from the payment data
+            type: 'forge',
             createdAt: new Date(lastPayment.createdAt).toISOString(),
         }
     );
@@ -159,8 +152,8 @@ async function handleOneTimePayment(body: WebhookPayload) {
     );
 }
 
-async function handleSubscriptionCancelled(body: WebhookPayload) {
-    const { user, subscription } = body.data;
+async function handleSubscriptionCancelled(data: WebhookPayloadData) {
+    const { user, subscription } = data;
 
     // Find Appwrite user
     const appwriteUser = await resolveAppwriteUser(user.email);
@@ -188,6 +181,14 @@ async function handleSubscriptionCancelled(body: WebhookPayload) {
             subscriptionStatus: 'cancelled',
         }
     );
+}
+
+function determinePlanType(productType: string | undefined): string {
+    if (!productType) return 'free';
+    if (productType.includes('annual')) return 'muse_annual';
+    if (productType.includes('monthly')) return 'muse_monthly';
+    if (productType.includes('forge')) return 'forge';
+    return 'free';
 }
 
 async function resolveAppwriteUser(email: string) {
