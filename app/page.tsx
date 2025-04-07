@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { ArrowRight, Sparkles, Globe, BarChart, BookOpen } from "lucide-react"
 import MockUp from "@/components/mockup"
-import PricingComponent from "@/components/common/pricing"
 
 export default function Home() {
   const features = [
@@ -67,7 +66,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-      <PricingComponent />
 
       <section className="py-20 bg-muted/50">
         <div className="container mx-auto px-4">
