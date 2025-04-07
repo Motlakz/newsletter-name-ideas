@@ -5,10 +5,9 @@ import { Check, Globe2, Search, Users2, BarChart3, X, Sparkles } from 'lucide-re
 import { Button } from '@/components/ui/button'
 import { GlassCard } from '@/components/ui/glass-card'
 import { motion } from "framer-motion"
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Switch } from '../ui/switch'
 import { useUser } from "@/hooks/use-auth";
-import Script from "next/script";
 
 interface Feature {
   name: string
@@ -20,12 +19,6 @@ interface Feature {
 interface PricingToggleProps {
   isAnnual: boolean;
   setIsAnnual: (value: boolean) => void;
-}
-
-const OVERLAY_IDS = {
-  MUSE_MONTHLY: process.env.NEXT_PUBLIC_MUSE_MONTHLY_ID || "",
-  MUSE_ANNUAL: process.env.NEXT_PUBLIC_MUSE_ANNUAL_ID || "",
-  FORGE: process.env.NEXT_PUBLIC_FORGE_ID || "",
 }
 
 const PricingToggle = ({ isAnnual, setIsAnnual }: PricingToggleProps) => {  
@@ -90,15 +83,9 @@ const PricingToggle = ({ isAnnual, setIsAnnual }: PricingToggleProps) => {
 }
 
 export default function PricingComponent() {
-  const [scriptLoaded, setScriptLoaded] = useState(false);
-  const [isAnnual, setIsAnnual] = useState(false)
-  const router = useRouter();
-  const { user } = useUser()
-
-    const getCheckoutUrl = (overlayId: string) => {
-      const baseUrl = `https://scrape-sync.stage.fungies.net/checkout-element/${overlayId}`
-      return user?.$id ? `${baseUrl}?appwrite_user_id=${user.$id}` : baseUrl
-    }
+    const [isAnnual, setIsAnnual] = useState(false)
+    const router = useRouter();
+    const { user } = useUser()
     
     const features: Feature[] = [
       {
@@ -132,12 +119,6 @@ export default function PricingComponent() {
         included: 'muse'
       }
     ]
-
-    useEffect(() => {
-      if (!OVERLAY_IDS.MUSE_MONTHLY || !OVERLAY_IDS.MUSE_ANNUAL || !OVERLAY_IDS.FORGE) {
-        console.error('Missing overlay IDs in environment variables');
-      }
-    }, []);
 
     const handleSubscribe = () => {
       router.push('/sign-up');
@@ -196,13 +177,9 @@ export default function PricingComponent() {
             </p>
             <Button
               className="mt-6 w-full"
-              disabled={!scriptLoaded}
-              data-fungies-checkout-url={getCheckoutUrl(
-                isAnnual ? OVERLAY_IDS.MUSE_ANNUAL : OVERLAY_IDS.MUSE_MONTHLY
-              )}
-              data-fungies-mode="overlay"
+              onClick={handleSubscribe}
             >
-              {scriptLoaded ? 'Subscribe to Muse' : 'Loading...'}
+              Subscribe to Muse
             </Button>
           </div>
         </GlassCard>
@@ -289,16 +266,6 @@ export default function PricingComponent() {
           Need help choosing? <button className="text-primary underline" onClick={handleSubscribe}>Contact our team</button>
         </p>
       </div>
-      <Script 
-          src='https://cdn.jsdelivr.net/npm/@fungies/fungies-js@0.0.6' 
-          defer 
-          data-auto-init
-          onLoad={() => setScriptLoaded(true)}
-          onError={(e) => {
-            console.error('Error loading Fungies script:', e);
-            setScriptLoaded(false);
-          }}
-        />
     </div>
   )
 }
