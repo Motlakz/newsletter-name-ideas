@@ -13,10 +13,10 @@ import { useUser } from "@/hooks/use-auth";
 import { PlanId } from "@/types/billing";
 import { purchasePlan } from "@/lib/plans/subscription";
 
-// Define types for Fungies global
 declare global {
   interface Window {
     Fungies?: {
+      init(): unknown;
       on: (event: string, callback: (data: any) => void) => void;
     };
   }
@@ -96,131 +96,137 @@ const PricingToggle = ({ isAnnual, setIsAnnual }: PricingToggleProps) => {
 }
 
 export default function PricingComponent() {
-  const { toast } = useToast()
-  const [isAnnual, setIsAnnual] = useState(false)
-  const [selectedPlanId, setSelectedPlanId] = useState<PlanId | null>(null)
-  const [loading, setLoading] = useState(false)
-  const router = useRouter();
-  const { user } = useUser(); // Custom hook to get Appwrite user
-
-  // Define overlay IDs for each plan
-  const overlayIds = {
-    [PlanId.MUSE]: process.env.NEXT_PUBLIC_MUSE_MONTHLY_OVERLAY_ID,
-    [PlanId.FORGE]: process.env.NEXT_PUBLIC_FORGE_OVERLAY_ID
-  };
-
-  const features: Feature[] = [
-    {
-      name: "Newsletter Name Generator",
-      description: "AI-powered name generation with customization options",
-      icon: <Sparkles className="h-5 w-5" />,
-      included: 'both'
-    },
-    {
-      name: "Domain Availability Checker",
-      description: "Instant domain checks for your newsletter names",
-      icon: <Globe2 className="h-5 w-5" />,
-      included: 'both'
-    },
-    {
-      name: "SEO Analysis",
-      description: "Detailed SEO insights for your newsletter names",
-      icon: <Search className="h-5 w-5" />,
-      included: 'both'
-    },
-    {
-      name: "Social Handle Check",
-      description: "Cross-platform username availability check",
-      icon: <Users2 className="h-5 w-5" />,
-      included: 'muse'
-    },
-    {
-      name: "Trend Analytics",
-      description: "Industry trends and naming pattern analysis",
-      icon: <BarChart3 className="h-5 w-5" />,
-      included: 'muse'
-    }
-  ]
-
-  // Function to generate overlay URL with user ID
-  const getOverlayUrl = (overlayId: string | undefined) => {
-    if (!overlayId) return "";
-    const baseUrl = `https://scrape-sync.stage.fungies.net/checkout-element/${overlayId}`;
-    return user?.$id ? `${baseUrl}?appwrite_user_id=${user.$id}` : baseUrl;
-  };
-
-  // Setup event listeners for Fungies payment processing
-  useEffect(() => {
-    if (typeof window !== "undefined" && window.Fungies && selectedPlanId) {
-      window.Fungies.on("payment_success", async () => {
-        setLoading(true);
-        try {
-          // Call the server action to process the purchase
-          const result = await purchasePlan(selectedPlanId, isAnnual);
-          
-          if (result.success) {
+    const { toast } = useToast()
+    const [isAnnual, setIsAnnual] = useState(false)
+    const [selectedPlanId, setSelectedPlanId] = useState<PlanId | null>(null)
+    const [scriptLoaded, setScriptLoaded] = useState(false)
+    const [loadingPlan, setLoadingPlan] = useState<PlanId | null>(null)
+    const router = useRouter();
+    const { user } = useUser();
+  
+    const overlayIds = {
+      [PlanId.MUSE]: process.env.NEXT_PUBLIC_MUSE_MONTHLY_OVERLAY_ID,
+      [PlanId.FORGE]: process.env.NEXT_PUBLIC_FORGE_OVERLAY_ID
+    };
+  
+    const features: Feature[] = [
+      {
+        name: "Newsletter Name Generator",
+        description: "AI-powered name generation with customization options",
+        icon: <Sparkles className="h-5 w-5" />,
+        included: 'both'
+      },
+      {
+        name: "Domain Availability Checker",
+        description: "Instant domain checks for your newsletter names",
+        icon: <Globe2 className="h-5 w-5" />,
+        included: 'both'
+      },
+      {
+        name: "SEO Analysis",
+        description: "Detailed SEO insights for your newsletter names",
+        icon: <Search className="h-5 w-5" />,
+        included: 'both'
+      },
+      {
+        name: "Social Handle Check",
+        description: "Cross-platform username availability check",
+        icon: <Users2 className="h-5 w-5" />,
+        included: 'muse'
+      },
+      {
+        name: "Trend Analytics",
+        description: "Industry trends and naming pattern analysis",
+        icon: <BarChart3 className="h-5 w-5" />,
+        included: 'muse'
+      }
+    ]
+  
+    const getOverlayUrl = (overlayId: string | undefined) => {
+      if (!overlayId) return "";
+      const baseUrl = `https://scrape-sync.stage.fungies.net/checkout-element/${overlayId}`;
+      return user?.$id ? `${baseUrl}?appwrite_user_id=${user.$id}` : baseUrl;
+    };
+  
+    useEffect(() => {
+      if (scriptLoaded && window.Fungies) {
+        window.Fungies.init(); // Re-initialize after script loads or user changes
+      }
+    }, [scriptLoaded, user]);
+  
+    useEffect(() => {
+      if (typeof window !== "undefined" && window.Fungies && selectedPlanId) {
+        const successHandler = async () => {
+          setLoadingPlan(selectedPlanId);
+          try {
+            const result = await purchasePlan(selectedPlanId, isAnnual);
+            if (result.success) {
+              toast({ title: "Purchase Successful!", description: result.message });
+              router.refresh();
+            } else {
+              throw new Error(result.error || "Unknown error");
+            }
+          } catch (error: any) {
             toast({
-              title: "Purchase Successful!",
-              description: result.message,
+              title: "Purchase Error",
+              description: error.message,
+              variant: "destructive",
             });
-            router.refresh();
-          } else {
-            throw new Error(result.error || "Unknown error");
+          } finally {
+            setLoadingPlan(null);
+            setSelectedPlanId(null);
           }
-        } catch (error: any) {
-          console.error("Purchase Error:", error);
+        };
+  
+        const errorHandler = () => {
           toast({
-            title: "Purchase Error",
-            description: "There was an error processing your purchase. Please contact support.",
+            title: "Payment Failed",
+            description: "Your payment could not be processed. Please try again.",
             variant: "destructive",
           });
-        } finally {
-          setLoading(false);
-        }
-      });
-
-      window.Fungies.on("payment_failed", () => {
+          setLoadingPlan(null);
+          setSelectedPlanId(null);
+        };
+  
+        window.Fungies.on("payment_success", successHandler);
+        window.Fungies.on("payment_failed", errorHandler);
+  
+        return () => {
+          window.Fungies?.on("payment_success", successHandler);
+          window.Fungies?.on("payment_failed", errorHandler);
+        };
+      }
+    }, [selectedPlanId, isAnnual, router, toast]);
+  
+    const handleSubscribe = (planId: PlanId) => {
+      if (planId === PlanId.FREE) {
         toast({
-          title: "Payment Failed",
-          description: "Your payment could not be processed. Please try again.",
-          variant: "destructive",
+          title: "Already Free!",
+          description: "You're currently using the free plan.",
+          duration: 3000,
         });
-      });
-    }
-  }, [selectedPlanId, isAnnual, router, toast, user]);
-
-  const handleSubscribe = (planId: PlanId) => {
-    if (planId === PlanId.FREE) {
-      toast({
-        title: "Already Free!",
-        description: "You're currently using the free plan.",
-        duration: 3000,
-      });
-      return;
-    }
-    
-    // Set the selected plan - this will be used when the payment succeeds
-    setSelectedPlanId(planId);
-    
-    // Check if we have a valid overlay ID for this plan
-    const overlayId = overlayIds[planId];
-    if (!overlayId) {
-      toast({
-        title: "Coming Soon!",
-        description: `${planId === PlanId.MUSE ? 'Muse Monthly' : 'Forge'} subscriptions will be available soon.`,
-        duration: 3000,
-      });
-    }
-    // The Fungies overlay will be triggered by the data-fungies-button attribute
-  };
+        return;
+      }
+      
+      const overlayId = overlayIds[planId];
+      if (!overlayId) {
+        toast({
+          title: "Coming Soon!",
+          description: `${planId === PlanId.MUSE ? 'Muse Monthly' : 'Forge'} subscriptions will be available soon.`,
+          duration: 3000,
+        });
+        return;
+      }
+      
+      setSelectedPlanId(planId);
+    };
 
   return (
     <div className="mx-auto max-w-7xl px-6 lg:px-8 py-12 bg-pink-300/10">
       <Script 
-        src="https://app.fungies.io/scripts/fungies-overlay.js"
+        src='https://cdn.jsdelivr.net/npm/@fungies/fungies-js@0.0.6'
         strategy="lazyOnload"
-        defer
-        onLoad={() => console.log("Fungies script loaded")}
+        onLoad={() => setScriptLoaded(true)}
       />
 
       <div className="mx-auto max-w-4xl text-center">
@@ -275,11 +281,12 @@ export default function PricingComponent() {
             </p>
             <Button
               className="mt-6 w-full"
-              disabled={loading}
-              data-fungies-button={getOverlayUrl(overlayIds[PlanId.MUSE])}
+              disabled={!!loadingPlan}
+              data-fungies-checkout-url={getOverlayUrl(overlayIds[PlanId.MUSE])}
+              data-fungies-mode="overlay"
               onClick={() => handleSubscribe(PlanId.MUSE)}
             >
-              {loading ? 'Processing...' : 'Subscribe to Muse'}
+              {loadingPlan === PlanId.MUSE ? 'Processing...' : 'Subscribe to Muse'}
             </Button>
           </div>
         </GlassCard>
@@ -298,11 +305,12 @@ export default function PricingComponent() {
             <Button
               variant="outline"
               className="mt-6 w-full"
-              disabled={loading}
-              data-fungies-button={getOverlayUrl(overlayIds[PlanId.FORGE])}
+              disabled={!!loadingPlan}
+              data-fungies-checkout-url={getOverlayUrl(overlayIds[PlanId.FORGE])}
+              data-fungies-mode="overlay"
               onClick={() => handleSubscribe(PlanId.FORGE)}
             >
-              {loading ? 'Processing...' : 'Get Lifetime Access'}
+              {loadingPlan === PlanId.FORGE ? 'Processing...' : 'Get Lifetime Access'}
             </Button>
           </div>
         </GlassCard>
