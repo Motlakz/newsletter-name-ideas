@@ -4,6 +4,7 @@ import { database, COLLECTIONS, DATABASES } from "@/lib/backend/appwrite";
 import { ID, Query } from "appwrite";
 import { verifySignature } from "@/lib/helper/verify";
 import { WebhookPayload, WebhookPayloadData } from "@/types/webhook";
+import { getPlanByPriceId, PlanId } from "@/types/billing";
 
 const WEBHOOK_SECRET = process.env.FUNGIES_TEST_WEBHOOK_SECRET;
 
@@ -70,6 +71,8 @@ async function handleSubscriptionCreated(data: WebhookPayloadData) {
         throw new Error("Could not resolve Appwrite user");
     }
 
+    const planType = determinePlanType(data.items[0]?.product.id);
+
     // Create subscription record
     await database.createDocument(
         DATABASES.MAIN,
@@ -79,7 +82,7 @@ async function handleSubscriptionCreated(data: WebhookPayloadData) {
             userId: appwriteUser.$id,
             subscriptionId: subscription.id,
             status: subscription.status,
-            planType: determinePlanType(data.items[0]?.product.type),
+            planType,
             startDate: new Date(subscription.currentIntervalStart).toISOString(),
             endDate: new Date(subscription.currentIntervalEnd).toISOString(),
             lastPaymentId: lastPayment?.id,
@@ -183,12 +186,10 @@ async function handleSubscriptionCancelled(data: WebhookPayloadData) {
     );
 }
 
-function determinePlanType(productType: string | undefined): string {
-    if (!productType) return 'free';
-    if (productType.includes('annual')) return 'muse_annual';
-    if (productType.includes('monthly')) return 'muse_monthly';
-    if (productType.includes('forge')) return 'forge';
-    return 'free';
+function determinePlanType(priceId: string | undefined): PlanId {
+    if (!priceId) return PlanId.FREE;
+    const plan = getPlanByPriceId(priceId);
+    return plan?.id || PlanId.FREE;
 }
 
 async function resolveAppwriteUser(email: string) {

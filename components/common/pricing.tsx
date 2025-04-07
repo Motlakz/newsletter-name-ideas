@@ -5,9 +5,11 @@ import { Check, Globe2, Search, Users2, BarChart3, X, Sparkles } from 'lucide-re
 import { Button } from '@/components/ui/button'
 import { GlassCard } from '@/components/ui/glass-card'
 import { motion } from "framer-motion"
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Switch } from '../ui/switch'
 import { useUser } from "@/hooks/use-auth";
+import { formatPrice, getPlanById, PlanId } from "@/types/billing";
+import Link from "next/link";
 
 interface Feature {
   name: string
@@ -83,47 +85,122 @@ const PricingToggle = ({ isAnnual, setIsAnnual }: PricingToggleProps) => {
 }
 
 export default function PricingComponent() {
-    const [isAnnual, setIsAnnual] = useState(false)
-    const router = useRouter();
-    const { user } = useUser()
-    
-    const features: Feature[] = [
-      {
-        name: "Newsletter Name Generator",
-        description: "AI-powered name generation with customization options",
-        icon: <Sparkles className="h-5 w-5" />,
-        included: 'both'
-      },
-      {
-        name: "Domain Availability Checker",
-        description: "Instant domain checks for your newsletter names",
-        icon: <Globe2 className="h-5 w-5" />,
-        included: 'both'
-      },
-      {
-        name: "SEO Analysis",
-        description: "Detailed SEO insights for your newsletter names",
-        icon: <Search className="h-5 w-5" />,
-        included: 'both'
-      },
-      {
-        name: "Social Handle Check",
-        description: "Cross-platform username availability check",
-        icon: <Users2 className="h-5 w-5" />,
-        included: 'muse'
-      },
-      {
-        name: "Trend Analytics",
-        description: "Industry trends and naming pattern analysis",
-        icon: <BarChart3 className="h-5 w-5" />,
-        included: 'muse'
+  const [isAnnual, setIsAnnual] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+  const { user, loading: userLoading } = useUser();
+
+  const musePlan = isAnnual 
+      ? getPlanById(PlanId.MUSE_ANNUAL)
+      : getPlanById(PlanId.MUSE_MONTHLY);
+  
+  const forgePlan = getPlanById(PlanId.FORGE);
+  const freePlan = getPlanById(PlanId.FREE);
+
+  useEffect(() => {
+    if (!musePlan || !forgePlan || !freePlan) {
+        setError('Failed to load plan information');
+    }
+  }, [musePlan, forgePlan, freePlan]);
+
+  const features: Feature[] = [
+    {
+      name: "Newsletter Name Generator",
+      description: "AI-powered name generation with customization options",
+      icon: <Sparkles className="h-5 w-5" />,
+      included: 'both'
+    },
+    {
+      name: "Domain Availability Checker",
+      description: "Instant domain checks for your newsletter names",
+      icon: <Globe2 className="h-5 w-5" />,
+      included: 'both'
+    },
+    {
+      name: "SEO Analysis",
+      description: "Detailed SEO insights for your newsletter names",
+      icon: <Search className="h-5 w-5" />,
+      included: 'both'
+    },
+    {
+      name: "Social Handle Check",
+      description: "Cross-platform username availability check",
+      icon: <Users2 className="h-5 w-5" />,
+      included: 'muse'
+    },
+    {
+      name: "Trend Analytics",
+      description: "Industry trends and naming pattern analysis",
+      icon: <BarChart3 className="h-5 w-5" />,
+      included: 'muse'
+    }
+  ];
+
+  const createSubscription = async (planId: PlanId) => {
+    setError(null);
+    setIsLoading(true);
+
+    try {
+        if (!user) {
+            router.push('/register');
+            return;
+        }
+
+        const response = await fetch('/api/subscription/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                planId,
+                userId: user.$id,
+            }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.error || 'Failed to create subscription');
+        }
+
+        // Check subscription status
+        if (data.data?.status === 'active' || data.data?.status === 'trialing') {
+            // Subscription is active, redirect to dashboard
+            router.push('/dashboard');
+        } else if (data.data?.lastPayment?.status === 'PENDING') {
+            // Payment pending, might need to wait or redirect to payment
+            router.push(`/payment-pending?subscriptionId=${data.data.subscriptionId}`);
+        } else {
+            // Handle other states or show appropriate message
+            setError('Subscription status unclear. Please contact support.');
+        }
+
+    } catch (err) {
+        console.error('Subscription creation error:', err);
+        setError(
+            err instanceof Error 
+                ? err.message 
+                : 'Failed to create subscription. Please try again.'
+        );
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
+  const handleSubscriptionClick = (planId: PlanId) => {
+      if (!user) {
+          router.push('/register');
+          return;
       }
-    ]
+      createSubscription(planId);
+  };
 
-    const handleSubscribe = () => {
-      router.push('/sign-up');
-    };
-
+  if (userLoading) {
+      return <div className="flex justify-center items-center min-h-screen">
+          Loading...
+      </div>;
+  }
   return (
     <div className="mx-auto max-w-7xl px-6 lg:px-8 py-12 bg-pink-300/10">
       <div className="mx-auto max-w-4xl text-center">
@@ -140,71 +217,87 @@ export default function PricingComponent() {
         setIsAnnual={setIsAnnual}
       />
 
+      {error && (
+        <div className="mt-4 text-red-500 text-center">
+          {error}
+        </div>
+      )}
+
       <div className="mt-16 flex flex-wrap gap-4 justify-center">
         {/* Free Plan */}
         <GlassCard className="rounded-3xl">
-          <div className="p-8">
-            <h3 className="text-lg font-semibold leading-8">Free</h3>
-            <p className="mt-4 text-sm leading-6 text-muted-foreground">
-              Get started with essential naming tools
-            </p>
-            <p className="mt-6 flex items-baseline gap-x-1">
-              <span className="text-4xl font-bold tracking-tight">$0</span>
-              <span className="text-sm font-semibold leading-6">/forever</span>
-            </p>
-            <Button
-              variant="outline"
-              className="mt-6 w-full"
-              onClick={() => router.push('/sign-up')}
-            >
-              Get Started
-            </Button>
-          </div>
+            <div className="p-8">
+                <h3 className="text-lg font-semibold leading-8">{freePlan?.name}</h3>
+                <p className="mt-4 text-sm leading-6 text-muted-foreground">
+                    Get started with essential naming tools
+                </p>
+                <p className="mt-6 flex items-baseline gap-x-1">
+                    <span className="text-4xl font-bold tracking-tight">
+                        $0
+                    </span>
+                </p>
+                <Button
+                    variant="outline"
+                    className="mt-6 w-full"
+                    onClick={() => handleSubscriptionClick(PlanId.FREE)}
+                    disabled={isLoading}
+                >
+                    {isLoading ? 'Processing...' : 'Get Started'}
+                </Button>
+            </div>
         </GlassCard>
 
-        {/* Muse Monthly */}
+        {/* Muse Plan */}
         <GlassCard className="rounded-3xl ring-2 ring-primary">
-          <div className="p-8">
-            <h3 className="text-lg font-semibold leading-8">Muse Monthly</h3>
-            <p className="mt-4 text-sm leading-6 text-muted-foreground">
-              Perfect for creators who need regular inspiration
-            </p>
-            <p className="mt-6 flex items-baseline gap-x-1">
-              <span className="text-4xl font-bold tracking-tight">
-                ${isAnnual ? '6.74' : '8.99'}
-              </span>
-              <span className="text-sm font-semibold leading-6">/month</span>
-            </p>
-            <Button
-              className="mt-6 w-full"
-              onClick={handleSubscribe}
-            >
-              Subscribe to Muse
-            </Button>
-          </div>
+            <div className="p-8">
+                <h3 className="text-lg font-semibold leading-8">
+                    {musePlan?.name}
+                </h3>
+                <p className="mt-4 text-sm leading-6 text-muted-foreground">
+                    Perfect for creators who need regular inspiration
+                </p>
+                <p className="mt-6 flex items-baseline gap-x-1">
+                    <span className="text-4xl font-bold tracking-tight">
+                        ${formatPrice(musePlan?.price || 0)}
+                    </span>
+                    <span className="text-sm font-semibold leading-6">
+                        /{isAnnual ? 'year' : 'month'}
+                    </span>
+                </p>
+                <Button
+                    className="mt-6 w-full"
+                    onClick={() => handleSubscriptionClick(isAnnual ? PlanId.MUSE_ANNUAL : PlanId.MUSE_MONTHLY)}
+                    disabled={isLoading}
+                >
+                    {isLoading ? 'Processing...' : 'Subscribe to Muse'}
+                </Button>
+            </div>
         </GlassCard>
 
-        {/* Forge Lifetime */}
+        {/* Forge Plan */}
         <GlassCard className="rounded-3xl">
-          <div className="p-8">
-            <h3 className="text-lg font-semibold leading-8">Forge</h3>
-            <p className="mt-4 text-sm leading-6 text-muted-foreground">
-              Lifetime access to premium features
-            </p>
-            <p className="mt-6 flex items-baseline gap-x-1">
-              <span className="text-4xl font-bold tracking-tight">$19.99</span>
-              <span className="text-sm font-semibold leading-6">/lifetime</span>
-            </p>
-            <Button
-              variant="outline"
-              className="mt-6 w-full"
-              onClick={handleSubscribe}
-            >
-              Get Lifetime Access
-            </Button>
-          </div>
+            <div className="p-8">
+                <h3 className="text-lg font-semibold leading-8">{forgePlan?.name}</h3>
+                <p className="mt-4 text-sm leading-6 text-muted-foreground">
+                    Lifetime access to premium features
+                </p>
+                <p className="mt-6 flex items-baseline gap-x-1">
+                    <span className="text-4xl font-bold tracking-tight">
+                        ${formatPrice(forgePlan?.price || 0)}
+                    </span>
+                    <span className="text-sm font-semibold leading-6">/lifetime</span>
+                </p>
+                <Button
+                    variant="outline"
+                    className="mt-6 w-full"
+                    onClick={() => handleSubscriptionClick(PlanId.FORGE)}
+                    disabled={isLoading}
+                >
+                    {isLoading ? 'Processing...' : 'Get Lifetime Access'}
+                </Button>
+            </div>
         </GlassCard>
-      </div>
+    </div>
 
       {/* Feature Comparison */}
       <div className="mt-16">
@@ -263,7 +356,7 @@ export default function PricingComponent() {
       {/* FAQ or Additional Info */}
       <div className="mt-16 text-center">
         <p className="text-muted-foreground">
-          Need help choosing? <button className="text-primary underline" onClick={handleSubscribe}>Contact our team</button>
+          Need help choosing? <Link href="/support" className="text-primary underline">Contact our team</Link>
         </p>
       </div>
     </div>
