@@ -1,25 +1,12 @@
 "use client"
 
-import Script from "next/script";
 import { useRouter } from "next/navigation";
 import { Check, Globe2, Search, Users2, BarChart3, X, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { GlassCard } from '@/components/ui/glass-card'
-import { useToast } from '@/hooks/use-toast'
 import { motion } from "framer-motion"
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Switch } from '../ui/switch'
-import { useUser } from "@/hooks/use-auth";
-import { PlanId } from "@/types/billing";
-import { purchasePlan } from "@/lib/plans/subscription";
-
-declare global {
-  interface Window {
-    Fungies?: {
-      on: (event: string, callback: (data: any) => void) => void;
-    };
-  }
-}
 
 interface Feature {
   name: string
@@ -95,18 +82,8 @@ const PricingToggle = ({ isAnnual, setIsAnnual }: PricingToggleProps) => {
 }
 
 export default function PricingComponent() {
-    const { toast } = useToast()
     const [isAnnual, setIsAnnual] = useState(false)
-    const [selectedPlanId, setSelectedPlanId] = useState<PlanId | null>(null)
-    const [scriptLoaded, setScriptLoaded] = useState(false)
-    const [loadingPlan, setLoadingPlan] = useState<PlanId | null>(null)
     const router = useRouter();
-    const { user } = useUser();
-  
-    const overlayIds = {
-      [PlanId.MUSE]: process.env.NEXT_PUBLIC_MUSE_MONTHLY_OVERLAY_ID,
-      [PlanId.FORGE]: process.env.NEXT_PUBLIC_FORGE_OVERLAY_ID
-    };
   
     const features: Feature[] = [
       {
@@ -140,88 +117,13 @@ export default function PricingComponent() {
         included: 'muse'
       }
     ]
-  
-    const getOverlayUrl = (overlayId: string | undefined) => {
-      if (!overlayId) return "";
-      const baseUrl = `https://scrape-sync.stage.fungies.net/checkout-element/${overlayId}`;
-      return user?.$id ? `${baseUrl}?appwrite_user_id=${user.$id}` : baseUrl;
-    };
-  
-    useEffect(() => {
-      if (typeof window !== "undefined" && window.Fungies && selectedPlanId) {
-        const successHandler = async () => {
-          setLoadingPlan(selectedPlanId);
-          try {
-            const result = await purchasePlan(selectedPlanId, isAnnual);
-            if (result.success) {
-              toast({ title: "Purchase Successful!", description: result.message });
-              router.refresh();
-            } else {
-              throw new Error(result.error || "Unknown error");
-            }
-          } catch (error: any) {
-            toast({
-              title: "Purchase Error",
-              description: error.message,
-              variant: "destructive",
-            });
-          } finally {
-            setLoadingPlan(null);
-            setSelectedPlanId(null);
-          }
-        };
-  
-        const errorHandler = () => {
-          toast({
-            title: "Payment Failed",
-            description: "Your payment could not be processed. Please try again.",
-            variant: "destructive",
-          });
-          setLoadingPlan(null);
-          setSelectedPlanId(null);
-        };
-  
-        window.Fungies.on("payment_success", successHandler);
-        window.Fungies.on("payment_failed", errorHandler);
-  
-        return () => {
-          window.Fungies?.on("payment_success", successHandler);
-          window.Fungies?.on("payment_failed", errorHandler);
-        };
-      }
-    }, [selectedPlanId, isAnnual, router, toast]);
-  
-    const handleSubscribe = (planId: PlanId) => {
-      if (planId === PlanId.FREE) {
-        toast({
-          title: "Already Free!",
-          description: "You're currently using the free plan.",
-          duration: 3000,
-        });
-        return;
-      }
-      
-      const overlayId = overlayIds[planId];
-      if (!overlayId) {
-        toast({
-          title: "Coming Soon!",
-          description: `${planId === PlanId.MUSE ? 'Muse Monthly' : 'Forge'} subscriptions will be available soon.`,
-          duration: 3000,
-        });
-        return;
-      }
-      
-      setSelectedPlanId(planId);
+
+    const handleSubscribe = () => {
+      router.push('/sign-up');
     };
 
   return (
     <div className="mx-auto max-w-7xl px-6 lg:px-8 py-12 bg-pink-300/10">
-      <Script 
-        src='https://cdn.jsdelivr.net/npm/@fungies/fungies-js@0.0.6'
-        strategy="lazyOnload"
-        onLoad={() => setScriptLoaded(true)}
-      />
-
       <div className="mx-auto max-w-4xl text-center">
         <h2 className="mt-2 text-3xl font-bold text-foreground">
           Choose Your Creative Journey
@@ -231,7 +133,6 @@ export default function PricingComponent() {
         </p>
       </div>
 
-      {/* Pricing Toggle */}
       <PricingToggle 
         isAnnual={isAnnual}
         setIsAnnual={setIsAnnual}
@@ -252,9 +153,9 @@ export default function PricingComponent() {
             <Button
               variant="outline"
               className="mt-6 w-full"
-              onClick={() => handleSubscribe(PlanId.FREE)}
+              onClick={handleSubscribe}
             >
-              Current Plan
+              Get Started
             </Button>
           </div>
         </GlassCard>
@@ -274,12 +175,9 @@ export default function PricingComponent() {
             </p>
             <Button
               className="mt-6 w-full"
-              disabled={!!loadingPlan}
-              data-fungies-checkout-url={getOverlayUrl(overlayIds[PlanId.MUSE])}
-              data-fungies-mode="overlay"
-              onClick={() => handleSubscribe(PlanId.MUSE)}
+              onClick={handleSubscribe}
             >
-              {loadingPlan === PlanId.MUSE ? 'Processing...' : 'Subscribe to Muse'}
+              Subscribe to Muse
             </Button>
           </div>
         </GlassCard>
@@ -298,12 +196,9 @@ export default function PricingComponent() {
             <Button
               variant="outline"
               className="mt-6 w-full"
-              disabled={!!loadingPlan}
-              data-fungies-checkout-url={getOverlayUrl(overlayIds[PlanId.FORGE])}
-              data-fungies-mode="overlay"
-              onClick={() => handleSubscribe(PlanId.FORGE)}
+              onClick={handleSubscribe}
             >
-              {loadingPlan === PlanId.FORGE ? 'Processing...' : 'Get Lifetime Access'}
+              Get Lifetime Access
             </Button>
           </div>
         </GlassCard>
@@ -366,13 +261,7 @@ export default function PricingComponent() {
       {/* FAQ or Additional Info */}
       <div className="mt-16 text-center">
         <p className="text-muted-foreground">
-        Need help choosing? <button className="text-primary underline" onClick={() => {
-          toast({
-            title: "Contact Us",
-            description: "Support system coming soon!",
-            duration: 3000,
-          })
-        }}>Contact our team</button>
+          Need help choosing? <button className="text-primary underline" onClick={handleSubscribe}>Contact our team</button>
         </p>
       </div>
     </div>
