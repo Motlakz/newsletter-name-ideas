@@ -1,18 +1,6 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-    async headers() {
-        return [
-            {
-                source: '/:path*',
-                headers: [
-                    {
-                        key: 'Content-Security-Policy',
-                        value: "frame-ancestors 'self' https://newsletternameideas.com https://www.newsletternameideas.com https://scrape-sync.stage.fungies.net/;",
-                    },
-                ],
-            },
-        ];
-    },
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
     images: {
         remotePatterns: [
             {
@@ -24,6 +12,6 @@ const nextConfig = {
         ]
     }
 }
-  
-module.exports = nextConfig
+
+export default nextConfig;
   

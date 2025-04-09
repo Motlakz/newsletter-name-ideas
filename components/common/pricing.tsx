@@ -1,27 +1,26 @@
 "use client"
 
-import { useRouter } from "next/navigation";
-import { Check, Globe2, Search, Users2, BarChart3, X, Sparkles } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { GlassCard } from '@/components/ui/glass-card'
-import { motion } from "framer-motion"
-import { useEffect, useState } from 'react'
-import { Switch } from '../ui/switch'
-import { useUser } from "@/hooks/use-auth";
-import { formatPrice, getPlanById, PlanId } from "@/types/billing";
+import { useState, useEffect } from "react";
+import { Check, Globe2, Search, Users2, BarChart3, X, Sparkles, Loader } from 'lucide-react';
+import { motion } from "framer-motion";
+import { Switch } from '../ui/switch';
 import Link from "next/link";
+import { Product } from "@/types/billing";
+import ProductGlassCard from "./product-card";
+import { IoSaveOutline } from "react-icons/io5";
 
 interface Feature {
-  name: string
-  description: string
-  icon: React.ReactNode
-  included: 'free' | 'muse' | 'forge' | 'both'
+  name: string;
+  description: string;
+  icon: React.ReactNode;
+  included: 'free' | 'paid' | 'both';
 }
 
 interface PricingToggleProps {
   isAnnual: boolean;
   setIsAnnual: (value: boolean) => void;
 }
+
 
 const PricingToggle = ({ isAnnual, setIsAnnual }: PricingToggleProps) => {  
   return (
@@ -81,28 +80,14 @@ const PricingToggle = ({ isAnnual, setIsAnnual }: PricingToggleProps) => {
         </motion.div>
       </motion.div>
     </div>
-  )
-}
+  );
+};
 
 export default function PricingComponent() {
   const [isAnnual, setIsAnnual] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
-  const { user, loading: userLoading } = useUser();
-
-  const musePlan = isAnnual 
-      ? getPlanById(PlanId.MUSE_ANNUAL)
-      : getPlanById(PlanId.MUSE_MONTHLY);
-  
-  const forgePlan = getPlanById(PlanId.FORGE);
-  const freePlan = getPlanById(PlanId.FREE);
-
-  useEffect(() => {
-    if (!musePlan || !forgePlan || !freePlan) {
-        setError('Failed to load plan information');
-    }
-  }, [musePlan, forgePlan, freePlan]);
 
   const features: Feature[] = [
     {
@@ -110,6 +95,12 @@ export default function PricingComponent() {
       description: "AI-powered name generation with customization options",
       icon: <Sparkles className="h-5 w-5" />,
       included: 'both'
+    },
+    {
+      name: "Name Ideas Storage",
+      description: "Unlimited storage for your favorite name ideas",
+      icon: <IoSaveOutline className="h-5 w-5" />,
+      included: 'paid'
     },
     {
       name: "Domain Availability Checker",
@@ -127,80 +118,64 @@ export default function PricingComponent() {
       name: "Social Handle Check",
       description: "Cross-platform username availability check",
       icon: <Users2 className="h-5 w-5" />,
-      included: 'muse'
+      included: 'paid'
     },
     {
       name: "Trend Analytics",
       description: "Industry trends and naming pattern analysis",
       icon: <BarChart3 className="h-5 w-5" />,
-      included: 'muse'
+      included: 'paid'
     }
   ];
 
-  const createSubscription = async (planId: PlanId) => {
-    setError(null);
-    setIsLoading(true);
-
-    try {
-        if (!user) {
-            router.push('/register');
-            return;
-        }
-
-        const response = await fetch('/api/subscription/create', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                planId,
-                userId: user.$id,
-            }),
+  // Fetch products on component mount
+  useEffect(() => {
+    async function fetchProducts() {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/products`, {
+          cache: 'no-store'
         });
-
-        const data = await response.json();
-
-        if (!response.ok || !data.success) {
-            throw new Error(data.error || 'Failed to create subscription');
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch products');
         }
-
-        // Check subscription status
-        if (data.data?.status === 'active' || data.data?.status === 'trialing') {
-            // Subscription is active, redirect to dashboard
-            router.push('/dashboard');
-        } else if (data.data?.lastPayment?.status === 'PENDING') {
-            // Payment pending, might need to wait or redirect to payment
-            router.push(`/payment-pending?subscriptionId=${data.data.subscriptionId}`);
-        } else {
-            // Handle other states or show appropriate message
-            setError('Subscription status unclear. Please contact support.');
-        }
-
-    } catch (err) {
-        console.error('Subscription creation error:', err);
-        setError(
-            err instanceof Error 
-                ? err.message 
-                : 'Failed to create subscription. Please try again.'
-        );
-    } finally {
-        setIsLoading(false);
-    }
-  };
-
-  const handleSubscriptionClick = (planId: PlanId) => {
-      if (!user) {
-          router.push('/register');
-          return;
+        
+        const fetchedProducts = await response.json();
+        setProducts(fetchedProducts);
+      } catch (err) {
+        console.error('Error fetching products:', err);
+        setError('Failed to load pricing information');
+      } finally {
+        setLoading(false);
       }
-      createSubscription(planId);
-  };
+    }
+    
+    fetchProducts();
+  }, []);
 
-  if (userLoading) {
-      return <div className="flex justify-center items-center min-h-screen">
-          Loading...
-      </div>;
+  // Filter products based on the billing cycle
+  const filteredProducts = products.filter(product => {
+    if (isAnnual) {
+      // Show annual products
+      return product.is_recurring && product.name.toLowerCase().includes('annual');
+    } else {
+      // Show monthly products
+      return product.is_recurring && product.name.toLowerCase().includes('monthly');
+    }
+  });
+
+  // Add one-time products
+  const oneTimeProducts = products.filter(product => !product.is_recurring);
+  const allDisplayProducts = [...filteredProducts, ...oneTimeProducts];
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <Loader className="w-16 h-16" />
+      </div>
+    );
   }
+
   return (
     <div className="mx-auto max-w-7xl px-6 lg:px-8 py-12 bg-pink-300/10">
       <div className="mx-auto max-w-4xl text-center">
@@ -224,80 +199,15 @@ export default function PricingComponent() {
       )}
 
       <div className="mt-16 flex flex-wrap gap-4 justify-center">
-        {/* Free Plan */}
-        <GlassCard className="rounded-3xl">
-            <div className="p-8">
-                <h3 className="text-lg font-semibold leading-8">{freePlan?.name}</h3>
-                <p className="mt-4 text-sm leading-6 text-muted-foreground">
-                    Get started with essential naming tools
-                </p>
-                <p className="mt-6 flex items-baseline gap-x-1">
-                    <span className="text-4xl font-bold tracking-tight">
-                        $0
-                    </span>
-                </p>
-                <Button
-                    variant="outline"
-                    className="mt-6 w-full"
-                    onClick={() => handleSubscriptionClick(PlanId.FREE)}
-                    disabled={isLoading}
-                >
-                    {isLoading ? 'Processing...' : 'Get Started'}
-                </Button>
-            </div>
-        </GlassCard>
-
-        {/* Muse Plan */}
-        <GlassCard className="rounded-3xl ring-2 ring-primary">
-            <div className="p-8">
-                <h3 className="text-lg font-semibold leading-8">
-                    {musePlan?.name}
-                </h3>
-                <p className="mt-4 text-sm leading-6 text-muted-foreground">
-                    Perfect for creators who need regular inspiration
-                </p>
-                <p className="mt-6 flex items-baseline gap-x-1">
-                    <span className="text-4xl font-bold tracking-tight">
-                        ${formatPrice(musePlan?.price || 0)}
-                    </span>
-                    <span className="text-sm font-semibold leading-6">
-                        /{isAnnual ? 'year' : 'month'}
-                    </span>
-                </p>
-                <Button
-                    className="mt-6 w-full"
-                    onClick={() => handleSubscriptionClick(isAnnual ? PlanId.MUSE_ANNUAL : PlanId.MUSE_MONTHLY)}
-                    disabled={isLoading}
-                >
-                    {isLoading ? 'Processing...' : 'Subscribe to Muse'}
-                </Button>
-            </div>
-        </GlassCard>
-
-        {/* Forge Plan */}
-        <GlassCard className="rounded-3xl">
-            <div className="p-8">
-                <h3 className="text-lg font-semibold leading-8">{forgePlan?.name}</h3>
-                <p className="mt-4 text-sm leading-6 text-muted-foreground">
-                    Lifetime access to premium features
-                </p>
-                <p className="mt-6 flex items-baseline gap-x-1">
-                    <span className="text-4xl font-bold tracking-tight">
-                        ${formatPrice(forgePlan?.price || 0)}
-                    </span>
-                    <span className="text-sm font-semibold leading-6">/lifetime</span>
-                </p>
-                <Button
-                    variant="outline"
-                    className="mt-6 w-full"
-                    onClick={() => handleSubscriptionClick(PlanId.FORGE)}
-                    disabled={isLoading}
-                >
-                    {isLoading ? 'Processing...' : 'Get Lifetime Access'}
-                </Button>
-            </div>
-        </GlassCard>
-    </div>
+        {allDisplayProducts.map((product, index) => (
+          <ProductGlassCard
+            key={product.product_id}
+            product={product}
+            isHighlighted={index === 1}
+            isAnnual={isAnnual}
+          />
+        ))}
+      </div>
 
       {/* Feature Comparison */}
       <div className="mt-16">
@@ -337,7 +247,7 @@ export default function PricingComponent() {
                 )}
               </div>
               <div className="text-center">
-                {(feature.included === 'muse' || feature.included === 'both' || feature.included === 'forge') ? (
+                {(feature.included === 'paid' || feature.included === 'both') ? (
                   <Check className="h-5 w-5 mx-auto text-green-500" />
                 ) : (
                   <X className="h-5 w-5 mx-auto text-red-500" />
@@ -360,5 +270,5 @@ export default function PricingComponent() {
         </p>
       </div>
     </div>
-  )
+  );
 }

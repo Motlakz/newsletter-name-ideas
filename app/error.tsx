@@ -1,6 +1,6 @@
 "use client"
 
-import Error from "@/components/common/error"
+import Error from "../components/common/error"
 
 type ErrorProps = {
     error: Error & { digest?: string }
