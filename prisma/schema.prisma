@@ -1,0 +1,163 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String           @id
+  email           String           @unique
+  createdAt       DateTime         @default(now())
+  subscriptions   Subscription[]
+  payments        Payment[]
+  customerProfile CustomerProfile?
+  userBalance     UserBalance?
+  savedNames      SavedName[]
+  activities      Activity[]
+  socialChecks    SocialCheck[]
+}
+
+model CustomerProfile {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  dodoCustomerId String   @unique
+  name           String
+  email          String
+  street         String?
+  city           String?
+  state          String?
+  zipcode        String?
+  country        String?  @default("US")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Subscription {
+  id                String             @id
+  userId            String
+  userBalanceId     String?
+  userBalance       UserBalance?       @relation(fields: [userBalanceId], references: [id])
+  status            SubscriptionStatus @default(PENDING)
+  productId         String
+  externalProductId Int?
+  planName          String
+  amount            Int
+  recurringAmount   Int?
+  currency          String             @default("USD")
+  interval          String
+  intervalCount     Int                @default(1)
+  startDate         DateTime
+  currentPeriodEnd  DateTime
+  cancelAtPeriod    Boolean            @default(false)
+  cancelReason      String?
+  clientSecret      String?
+  paymentLink       String?
+  metadata          Json?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payments          Payment[]
+}
+
+model Payment {
+  id                String        @id
+  userId            String
+  userBalanceId     String?
+  userBalance       UserBalance?  @relation(fields: [userBalanceId], references: [id])
+  externalProductId Int?
+  subscriptionId    String?
+  productId         String?
+  quantity          Int           @default(1)
+  amount            Int
+  currency          String        @default("USD")
+  status            PaymentStatus @default(PENDING)
+  paymentMethod     String?
+  paymentMethodId   String?
+  paymentLink       String?
+  clientSecret      String?
+  refundAmount      Int?
+  refundReason      String?
+  disputeStatus     String?
+  disputeReason     String?
+  processingError   String?
+  metadata          Json?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscription      Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+}
+
+model UserBalance {
+  id            String         @id @default(cuid())
+  userId        String         @unique
+  user          User           @relation(fields: [userId], references: [id])
+  credits       Int            @default(0)
+  payments      Payment[]
+  subscriptions Subscription[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model WebhookEvent {
+  id             String   @id
+  eventType      String
+  eventData      Json
+  processedAt    DateTime @default(now())
+  idempotencyKey String   @unique
+  status         String   @default("PROCESSED")
+  error          String?
+}
+
+model SavedName {
+  id        String   @id @default(cuid())
+  name      String
+  category  String
+  description String?
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Activity {
+  id        String   @id @default(cuid())
+  type      String
+  name      String
+  date      String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model SocialCheck {
+  id        String   @id @default(cuid())
+  name      String
+  twitter   Boolean
+  instagram Boolean
+  facebook  Boolean
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, name])
+}
+
+enum SubscriptionStatus {
+  PENDING
+  ACTIVE
+  ON_HOLD
+  CANCELLED
+  FAILED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+  DISPUTED
+}

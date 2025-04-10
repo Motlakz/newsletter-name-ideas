@@ -31,7 +31,7 @@ export default function Home() {
       icon: <BookOpen className="h-6 w-6 text-primary" />,
       title: "Learning Resources",
       description: "Access guides and templates to launch your newsletter successfully.",
-      link: "/resources",
+      link: "/blog",
     },
   ]
 

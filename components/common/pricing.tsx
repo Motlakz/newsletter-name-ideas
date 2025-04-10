@@ -8,6 +8,7 @@ import Link from "next/link";
 import { Product } from "@/types/billing";
 import ProductGlassCard from "./product-card";
 import { IoSaveOutline } from "react-icons/io5";
+import { GlassCard } from "../ui/glass-card";
 
 interface Feature {
   name: string;
@@ -168,16 +169,8 @@ export default function PricingComponent() {
   const oneTimeProducts = products.filter(product => !product.is_recurring);
   const allDisplayProducts = [...filteredProducts, ...oneTimeProducts];
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <Loader className="w-16 h-16" />
-      </div>
-    );
-  }
-
   return (
-    <div className="mx-auto max-w-7xl px-6 lg:px-8 py-12 bg-pink-300/10">
+    <section id="plans" className="mx-auto max-w-7xl px-6 lg:px-8 py-12 bg-pink-300/10">
       <div className="mx-auto max-w-4xl text-center">
         <h2 className="mt-2 text-3xl font-bold text-foreground">
           Choose Your Creative Journey
@@ -199,14 +192,22 @@ export default function PricingComponent() {
       )}
 
       <div className="mt-16 flex flex-wrap gap-4 justify-center">
-        {allDisplayProducts.map((product, index) => (
-          <ProductGlassCard
-            key={product.product_id}
-            product={product}
-            isHighlighted={index === 1}
-            isAnnual={isAnnual}
-          />
-        ))}
+        {loading ? (
+          Array.from({ length: 3 }).map((_, index) => (
+            <SkeletonProductCard key={index} />
+          ))
+        ) : error ? (
+          <div className="text-red-500 text-center">{error}</div>
+        ) : (
+          allDisplayProducts.map((product, index) => (
+            <ProductGlassCard
+              key={product.product_id}
+              product={product}
+              isHighlighted={index === 1}
+              isAnnual={isAnnual}
+            />
+          ))
+        )}
       </div>
 
       {/* Feature Comparison */}
@@ -269,6 +270,22 @@ export default function PricingComponent() {
           Need help choosing? <Link href="/support" className="text-primary underline">Contact our team</Link>
         </p>
       </div>
-    </div>
+    </section>
   );
 }
+
+const SkeletonProductCard = () => {
+  return (
+    <GlassCard className="rounded-3xl max-w-lg w-full animate-pulse">
+      <div className="p-8 space-y-6">
+        <div className="h-6 bg-purple-300/20 rounded w-3/4"></div>
+        <div className="space-y-3">
+          <div className="h-4 bg-purple-300/20 rounded w-full"></div>
+          <div className="h-4 bg-purple-300/20 rounded w-5/6"></div>
+        </div>
+        <div className="h-10 bg-purple-300/20 rounded w-1/2"></div>
+        <div className="h-12 bg-purple-300/20 rounded-xl"></div>
+      </div>
+    </GlassCard>
+  );
+};

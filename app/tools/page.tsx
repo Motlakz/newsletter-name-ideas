@@ -1,13 +1,17 @@
 "use client"
 
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { GlassCard, GlassCardContent, GlassCardHeader } from "@/components/ui/glass-card"
-import { Globe, Search, CheckCircle, XCircle, Loader, AlertTriangle } from "lucide-react"
+import { Globe, Search, CheckCircle, XCircle, Loader, AlertTriangle, Lock } from "lucide-react"
 import { checkDomainAvailability, checkSocialMediaHandles, checkTLDAvailability, generateNames } from '@/lib/actions'
+import { useAuth } from "@clerk/nextjs"
+import { useRouter } from "next/navigation"
+import { checkSubscriptionStatus } from '@/actions/data'
+import { GeneratedName } from '@/types/templates'
 
 type DomainResult = {
   domain: string;
@@ -19,15 +23,10 @@ type DomainResult = {
   isPlatform: boolean;
 }
 
-type GeneratedName = {
-  id: string
-  name: string
-  description: string
-  category: string
-  isFavorite: boolean
-}
-
 export default function ToolsPage() {
+  const { isSignedIn } = useAuth()
+  const router = useRouter()
+  const [isPremium, setIsPremium] = useState(false)
   const [domainName, setDomainName] = useState('')
   const [domainResults, setDomainResults] = useState<DomainResult[]>([])
   const [seoName, setSeoName] = useState('')
@@ -39,6 +38,42 @@ export default function ToolsPage() {
     handle: string
     available: boolean
   }>>([])
+
+  useEffect(() => {
+    const checkPremium = async () => {
+      try {
+        const { subscribed } = await checkSubscriptionStatus()
+        setIsPremium(subscribed)
+      } catch (error) {
+        console.error('Subscription check failed:', error)
+        setIsPremium(false)
+      }
+    }
+    if (isSignedIn) checkPremium()
+  }, [isSignedIn])
+
+  const PremiumOverlay = () => (
+    <div 
+      className="absolute inset-0 z-10 backdrop-blur-md bg-black/60 cursor-pointer rounded-lg flex items-center justify-center"
+      onClick={() => router.push('/#plans')}
+    >
+      <div className="flex flex-col items-center justify-center gap-3 text-center p-6 max-w-md mx-auto">
+        <Lock className="h-12 w-12 text-primary animate-pulse" />
+        <h3 className="text-2xl font-semibold text-primary">Premium Feature</h3>
+        <p className="text-white/90 mb-2">Upgrade to check availability of social media handles across platforms</p>
+        <Button 
+          variant="secondary" 
+          className="mt-4 font-medium px-6 py-2" 
+          onClick={(e) => {
+            e.stopPropagation()
+            router.push('/#plans')
+          }}
+        >
+          Upgrade to Premium
+        </Button>
+      </div>
+    </div>
+  )
 
   // Domain Checker Functions
   const handleDomainCheck = async () => {
@@ -228,6 +263,11 @@ export default function ToolsPage() {
   }
 
   const handleSocialCheck = async () => {
+    if (!isPremium) {
+      router.push('/#plans')
+      return
+    }
+
     startTransition(async () => {
       try {
         const results = await checkSocialMediaHandles(handleName)
@@ -447,11 +487,12 @@ export default function ToolsPage() {
             </TabsContent>
 
             <TabsContent value="social">
-              <GlassCard>
+              <GlassCard className="relative overflow-hidden">
+                {!isPremium && <PremiumOverlay />}
                 <GlassCardHeader>
                   <h2 className="text-2xl font-semibold">Social Media Handle Checker</h2>
                   <p className="text-muted-foreground">
-                    Check availability of social media handles for your newsletter.
+                    {isPremium ? "Check availability of social media handles" : "Premium feature"}
                   </p>
                 </GlassCardHeader>
                 <GlassCardContent>
@@ -468,19 +509,15 @@ export default function ToolsPage() {
                           value={handleName}
                           onChange={(e) => setHandleName(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
                           className="rounded-l-none border-input/50 focus:border-primary"
+                          disabled={!isPremium}
                         />
                       </div>
                       <Button 
                         onClick={handleSocialCheck}
-                        disabled={isPending || !handleName}
-                        className="w-full sm:w-[300px] bg-gradient-to-r from-primary to-purple-400 hover:from-primary/90 hover:to-purple-400/90 text-white shadow-md hover:shadow-lg transition-all"
-                      >
-                        {isPending ? (
-                          <Loader className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <Search className="mr-2 h-4 w-4" />
-                        )}
-                        Check Social Media Availability
+                        disabled={isPending || !handleName || !isPremium}
+                        className="w-full sm:w-[300px] bg-gradient-to-r from-primary to-purple-400 hover:from-primary/90 hover:to-purple-400/90 text-white shadow-md hover:shadow-lg transition-all">
+                        {isPending ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : 
+                        isPremium ? "Check Availability" : "Premium Required"}
                       </Button>
                     </div>
 
@@ -495,30 +532,21 @@ export default function ToolsPage() {
                                 result.available 
                                   ? 'bg-green-100/50 dark:bg-green-900/20 border-green-200 dark:border-green-900/50'
                                   : 'bg-red-100/50 dark:bg-red-900/20 border-red-200 dark:border-red-900/50'
-                              }`}
-                            >
+                              }`}>
                               <div className="flex items-center gap-2">
-                                <span className="font-medium capitalize">
-                                  {result.platform}
-                                </span>
-                                <span className="text-muted-foreground">
-                                  {result.handle}
-                                </span>
+                                <span className="font-medium capitalize">{result.platform}</span>
+                                <span className="text-muted-foreground">{result.handle}</span>
                               </div>
                               <div className="flex items-center gap-2">
                                 {result.available ? (
                                   <>
                                     <CheckCircle className="h-5 w-5 text-green-500" />
-                                    <span className="text-green-700 dark:text-green-400">
-                                      Available
-                                    </span>
+                                    <span className="text-green-700 dark:text-green-400">Available</span>
                                   </>
                                 ) : (
                                   <>
                                     <XCircle className="h-5 w-5 text-red-500" />
-                                    <span className="text-red-700 dark:text-red-400">
-                                      Taken
-                                    </span>
+                                    <span className="text-red-700 dark:text-red-400">Taken</span>
                                   </>
                                 )}
                               </div>

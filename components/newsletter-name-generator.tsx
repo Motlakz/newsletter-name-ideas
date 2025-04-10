@@ -16,6 +16,7 @@ import { generateNames, checkDomainAvailability } from "@/lib/actions"
 import { cn } from "@/lib/utils"
 import { motion, AnimatePresence } from "framer-motion"
 import { GeneratedName, TemplatePreset } from "@/types/templates"
+import { useNewsletter } from "@/context/NewsletterContext"
 
 export default function NewsletterNameGenerator() {
   const [topic, setTopic] = useState("")
@@ -28,20 +29,12 @@ export default function NewsletterNameGenerator() {
   const [useEmojis, setUseEmojis] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [isCheckingDomain, setIsCheckingDomain] = useState(false)
-  const [names, setNames] = useState<GeneratedName[]>([])
-  const [favorites, setFavorites] = useState<GeneratedName[]>([])
   const [activeFilter, setActiveFilter] = useState("all")
   const [sortBy, setSortBy] = useState("default")
   const [activeTab, setActiveTab] = useState("generator")
   const [domainResults, setDomainResults] = useState<{ [key: string]: boolean }>({})
   const [activeTemplate, setActiveTemplate] = useState<string>("")
-
-  useEffect(() => {
-    const storedFavorites = localStorage.getItem("newsletterFavorites")
-    if (storedFavorites) {
-      setFavorites(JSON.parse(storedFavorites))
-    }
-  }, [])
+  const { names, favorites, setNames, addToFavorites, removeFromFavorites } = useNewsletter()
 
   // Save favorites to local storage whenever they change
   useEffect(() => {
@@ -75,7 +68,7 @@ export default function NewsletterNameGenerator() {
         useAlliteration,
         useEmojis,
       })
-      setNames(generatedNames)
+      setNames(generatedNames) // This will now update the context
       setActiveTab("results")
     } catch (error) {
       console.error("Error generating names:", error)
@@ -86,9 +79,9 @@ export default function NewsletterNameGenerator() {
 
   const toggleFavorite = (name: GeneratedName) => {
     if (favorites.some((fav) => fav.id === name.id)) {
-      setFavorites(favorites.filter((fav) => fav.id !== name.id))
+      removeFromFavorites(name.id)
     } else {
-      setFavorites([...favorites, name])
+      addToFavorites(name)
     }
   }
 
