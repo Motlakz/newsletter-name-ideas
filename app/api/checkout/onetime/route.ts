@@ -42,7 +42,7 @@ async function getOrCreateUser(userId: string, user: any) {
 
 function mapDodoStatus(dodoStatus: string | null | undefined): PaymentStatus {
     if (!dodoStatus) {
-        return PaymentStatus.SUCCEEDED;
+        return PaymentStatus.PENDING;
     }
     
     const statusMap = new Map<string, PaymentStatus>([
@@ -54,14 +54,13 @@ function mapDodoStatus(dodoStatus: string | null | undefined): PaymentStatus {
     ]);
   
     const normalizedStatus = dodoStatus.toLowerCase();
-    const mappedStatus = statusMap.get(normalizedStatus) || PaymentStatus.SUCCEEDED; // Default to SUCCEEDED
+    const mappedStatus = statusMap.get(normalizedStatus) || PaymentStatus.PENDING;
     
     console.log(`Mapped DodoPayments status '${dodoStatus}' to '${mappedStatus}'`);
     return mappedStatus;
 }
 
-// Function to update payment status based on URL parameters
-export async function updatePaymentFromUrlParams(request: Request) {
+async function updatePaymentFromUrlParams(request: Request) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const encryptedPaymentId = searchParams.get("payment_id");
@@ -168,7 +167,7 @@ export async function GET(request: Request) {
             return_url: `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard`,
         });
 
-        // Default to SUCCEEDED since payments are typically successful
+        // Default to PENDING as a more conservative approach
         const paymentStatus = mapDodoStatus(response.status);
 
         // Create payment record in database
@@ -307,7 +306,7 @@ export async function POST(request: Request) {
             return_url: `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard`,
         });
 
-        // Default to SUCCEEDED since payments are typically successful
+        // Default to PENDING as a more conservative approach
         const paymentStatus = mapDodoStatus(response.status);
 
         await prisma.payment.create({

@@ -42,28 +42,26 @@ async function getOrCreateUser(userId: string, user: any) {
 
 function mapDodoStatus(dodoStatus: string | null | undefined): SubscriptionStatus {
     if (!dodoStatus) {
-        console.log("No status provided from DodoPayments, using ACTIVE as default");
-        // Since we're seeing that subscriptions are actually active, default to ACTIVE instead of PENDING
-        return SubscriptionStatus.ACTIVE;
+        console.log("No status provided from DodoPayments, using PENDING as default");
+        return SubscriptionStatus.PENDING;
     }
     
     const statusMap = new Map<string, SubscriptionStatus>([
-      ['active', SubscriptionStatus.ACTIVE],
-      ['pending', SubscriptionStatus.PENDING],
-      ['on_hold', SubscriptionStatus.ON_HOLD],
-      ['cancelled', SubscriptionStatus.CANCELLED],
-      ['failed', SubscriptionStatus.FAILED]
+        ['active', SubscriptionStatus.ACTIVE],
+        ['pending', SubscriptionStatus.PENDING],
+        ['on_hold', SubscriptionStatus.ON_HOLD],
+        ['cancelled', SubscriptionStatus.CANCELLED],
+        ['failed', SubscriptionStatus.FAILED]
     ]);
   
     const normalizedStatus = dodoStatus.toLowerCase();
-    const mappedStatus = statusMap.get(normalizedStatus) || SubscriptionStatus.ACTIVE; // Default to ACTIVE
+    const mappedStatus = statusMap.get(normalizedStatus) || SubscriptionStatus.PENDING;
     
     console.log(`Mapped DodoPayments status '${dodoStatus}' to '${mappedStatus}'`);
     return mappedStatus;
 }
 
-// Function to update subscription status based on URL parameters
-export async function updateSubscriptionFromUrlParams(request: Request) {
+async function updateSubscriptionFromUrlParams(request: Request) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const encryptedSubscriptionId = searchParams.get("subscription_id");
@@ -166,16 +164,10 @@ export async function GET(request: Request) {
             return_url: `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard`,
         });
 
-        const secureResponse = {
-            ...response,
-            subscription_id: encrypt(response.subscription_id)
-        };
-
         const currentDate = new Date();
         const periodEnd = new Date(currentDate);
         periodEnd.setMonth(periodEnd.getMonth() + 1);
 
-        // Default to ACTIVE since we know subscriptions are typically active
         const subscriptionStatus = mapDodoStatus(response.status);
 
         await prisma.subscription.create({
@@ -203,6 +195,11 @@ export async function GET(request: Request) {
                 }
             }
         });
+
+        const secureResponse = {
+            ...response,
+            subscription_id: encrypt(response.subscription_id)
+        };
 
         return NextResponse.json(secureResponse);
     } catch (error) {
@@ -307,16 +304,10 @@ export async function POST(request: Request) {
             return_url: `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard`,
         });
 
-        const secureResponse = {
-            ...response,
-            subscription_id: encrypt(response.subscription_id)
-        };
-
         const currentDate = new Date();
         const periodEnd = new Date(currentDate);
         periodEnd.setMonth(periodEnd.getMonth() + 1);
 
-        // Default to ACTIVE since we know subscriptions are typically active
         const subscriptionStatus = mapDodoStatus(response.status);
 
         await prisma.subscription.create({
@@ -344,6 +335,11 @@ export async function POST(request: Request) {
                 }
             }
         });
+
+        const secureResponse = {
+            ...response,
+            subscription_id: encrypt(response.subscription_id)
+        };
 
         return NextResponse.json(secureResponse);
     } catch (error) {
