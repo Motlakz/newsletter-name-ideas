@@ -20,17 +20,38 @@ function validateCountryCode(country: string): CountryCode {
 
 async function getOrCreateUser(userId: string, user: any) {
     try {
+        // First try to find by userId
         let dbUser = await prisma.user.findUnique({
             where: { id: userId }
         });
 
         if (!dbUser) {
-            dbUser = await prisma.user.create({
-                data: {
-                    id: userId,
-                    email: user.emailAddresses[0]?.emailAddress || '',
+            // If not found by userId, check if user exists with the same email
+            const email = user.emailAddresses[0]?.emailAddress || '';
+            
+            if (email) {
+                dbUser = await prisma.user.findUnique({
+                    where: { email }
+                });
+            }
+            
+            // Only create if no user with this email exists
+            if (!dbUser) {
+                dbUser = await prisma.user.create({
+                    data: {
+                        id: userId,
+                        email: email,
+                    }
+                });
+            } else {
+                // If user with email exists but has different ID, update the ID
+                if (dbUser.id !== userId) {
+                    dbUser = await prisma.user.update({
+                        where: { id: dbUser.id },
+                        data: { id: userId }
+                    });
                 }
-            });
+            }
         }
 
         return dbUser;
@@ -42,7 +63,7 @@ async function getOrCreateUser(userId: string, user: any) {
 
 function mapDodoStatus(dodoStatus: string | null | undefined): PaymentStatus {
     if (!dodoStatus) {
-        return PaymentStatus.SUCCEEDED;
+        return PaymentStatus.PENDING;
     }
     
     const statusMap = new Map<string, PaymentStatus>([
@@ -54,7 +75,7 @@ function mapDodoStatus(dodoStatus: string | null | undefined): PaymentStatus {
     ]);
   
     const normalizedStatus = dodoStatus.toLowerCase();
-    const mappedStatus = statusMap.get(normalizedStatus) || PaymentStatus.SUCCEEDED; // Default to SUCCEEDED
+    const mappedStatus = statusMap.get(normalizedStatus) || PaymentStatus.PENDING;
     
     console.log(`Mapped DodoPayments status '${dodoStatus}' to '${mappedStatus}'`);
     return mappedStatus;

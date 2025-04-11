@@ -47,7 +47,7 @@ async function processSubscriptionEvent(payload: any) {
     
     console.log(`Processing subscription event: ${type} for ID: ${subscriptionId}`);
     
-    const dodoSubscription = await dodopayments.subscriptions.get(subscriptionId);
+    const dodoSubscription = await dodopayments.subscriptions.retrieve(subscriptionId);
     console.log(`DodoPayments subscription status: ${dodoSubscription.status}`);
     
     // Find the user by CustomerProfile
@@ -103,12 +103,12 @@ async function processSubscriptionEvent(payload: any) {
                 userId: user.id,
                 status,
                 productId: dodoSubscription.product_id,
-                planName: dodoSubscription.product_name || "Default Plan",
-                amount: Math.round(dodoSubscription.amount || 0),
-                recurringAmount: Math.round(dodoSubscription.recurring_amount || 0),
+                planName: "Subscription",
+                amount: dodoSubscription.recurring_pre_tax_amount || 0,
+                recurringAmount: Math.round(dodoSubscription.recurring_pre_tax_amount || 0),
                 currency: dodoSubscription.currency || "USD",
-                interval: dodoSubscription.interval || "month",
-                startDate: new Date(dodoSubscription.start_date || Date.now()),
+                interval: dodoSubscription.payment_frequency_interval || "month",
+                startDate: new Date(),
                 currentPeriodEnd: new Date(dodoSubscription.next_billing_date || Date.now()),
                 metadata: {
                     statusHistory: [{
@@ -128,7 +128,7 @@ async function processPaymentEvent(payload: any) {
     
     console.log(`Processing payment event: ${type} for ID: ${paymentId}`);
     
-    const dodoPayment = await dodopayments.payments.get(paymentId);
+    const dodoPayment = await dodopayments.payments.retrieve(paymentId);
     console.log(`DodoPayments payment status: ${dodoPayment.status}`);
     
     // Find user by CustomerProfile
@@ -184,12 +184,12 @@ async function processPaymentEvent(payload: any) {
                 id: paymentId,
                 userId: user.id,
                 subscriptionId: dodoPayment.subscription_id,
-                productId: dodoPayment.product_id,
+                productId: dodoPayment.payment_id,
                 currency: dodoPayment.currency || "USD",
                 status,
                 amount: Math.round(dodoPayment.total_amount || 0),
-                paymentMethod: dodoPayment.payment_method || "",
-                paymentMethodId: dodoPayment.payment_method_id || "",
+                paymentMethod: dodoPayment.payment_method_type || "",
+                paymentMethodId: dodoPayment.payment_method || "",
                 metadata: {
                     statusHistory: [{
                         status,
@@ -264,7 +264,7 @@ function mapSubscriptionStatus(type: string, data: any, dodoStatus?: string) {
     return { status, statusMetadata };
 }
 
-function mapPaymentStatus(type: string, data: any, dodoStatus?: string) {
+function mapPaymentStatus(type: string, data: any, dodoStatus?: string | null) {
     let status: "PENDING" | "SUCCEEDED" | "FAILED" | "REFUNDED" | "DISPUTED";
     let statusMetadata: any = {
         reason: "",
@@ -308,7 +308,7 @@ function mapPaymentStatus(type: string, data: any, dodoStatus?: string) {
                     status = "SUCCEEDED"; // Default to SUCCEEDED
                     statusMetadata.reason = `Unrecognized status in event data: ${data.status}, defaulting to SUCCEEDED`;
                 }
-            } else if (dodoStatus) {
+            } else if (dodoStatus && typeof dodoStatus === 'string') {
                 const upperDodoStatus = dodoStatus.toUpperCase();
                 if (["PENDING", "SUCCEEDED", "FAILED", "REFUNDED", "DISPUTED"].includes(upperDodoStatus)) {
                     status = upperDodoStatus as "PENDING" | "SUCCEEDED" | "FAILED" | "REFUNDED" | "DISPUTED";
