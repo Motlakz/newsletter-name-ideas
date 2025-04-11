@@ -1,3 +1,4 @@
+import { encrypt } from "@/lib/helper/crypto";
 import { processWebhookEvent } from "@/lib/webhook-handler";
 import crypto from "crypto";
 import Redis from "ioredis";
@@ -109,8 +110,10 @@ export async function POST(request: Request) {
             webhookId
         });
 
-        // Process the webhook in database
-        await processWebhookEvent(payload, webhookId);
+        const encryptedWebhookId = encrypt(webhookId);
+
+        // Process the webhook in database with encrypted ID
+        await processWebhookEvent(payload, encryptedWebhookId);
 
         // Store successful processing
         await redis.set(idempotencyKey, "processed", "EX", 604800); // 7 days

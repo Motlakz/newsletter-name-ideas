@@ -5,6 +5,7 @@ import prisma from '@/lib/db'
 import { auth, currentUser } from '@clerk/nextjs/server'
 import { z } from 'zod'
 import { ActivityType, SocialHandleCheck } from '@/types/data'
+import { SubscriptionStatus } from '@prisma/client'
 
 const nameSchema = z.object({
     name: z.string().min(1, 'Name is required'),
@@ -26,13 +27,14 @@ async function checkSubscription(userId: string) {
   const subscription = await prisma.subscription.findFirst({
     where: {
       userId,
-      status: 'ACTIVE',
+      status: 'ACTIVE' as SubscriptionStatus,
       currentPeriodEnd: {
         gt: new Date(),
       },
     },
-  })
-  return !!subscription
+  });
+
+  return !!subscription;
 }
 
 /**
@@ -379,15 +381,25 @@ export async function searchSavedNames(searchTerm: string) {
 /**
  * Check subscription status
  */
-export async function checkSubscriptionStatus() {
-  const { userId } = await auth()
-  if (!userId) return { subscribed: false }
-
+export async function checkSubscriptionStatus(): Promise<{
+  subscribed: boolean;
+  error?: string;
+}> {
   try {
-    const hasSubscription = await checkSubscription(userId)
-    return { subscribed: hasSubscription }
+    const { userId } = await auth();
+    if (!userId) return { subscribed: false, error: 'Unauthorized' };
+
+    const hasSubscription = await checkSubscription(userId);
+    return { 
+      subscribed: hasSubscription,
+      ...(!hasSubscription && { error: 'No active subscription found' })
+    };
   } catch (error) {
-    console.error('Error checking subscription:', error)
-    return { subscribed: false }
+    console.error('Error checking subscription:', error);
+    return { 
+      subscribed: false,
+      error: error instanceof Error ? error.message : 'Subscription check failed'
+    };
   }
 }
+

@@ -23,11 +23,13 @@ import {
   Facebook,
   Save,
   Check,
+  AlertTriangle
 } from "lucide-react"
 import { useNewsletter } from "@/context/NewsletterContext"
 import { cn } from "@/lib/utils"
 import { GeneratedName } from "@/types/templates"
 import { checkSocialMediaHandles } from "@/lib/actions"
+import { checkSubscriptionStatus } from "@/actions/data"
 import { useAuth, UserButton } from "@clerk/nextjs"
 import { Activity } from "@/types/data"
 import { useRouter } from "next/navigation"
@@ -39,6 +41,8 @@ export default function DashboardPage() {
     const [editingNameId, setEditingNameId] = useState<string | null>(null)
     const [editForm, setEditForm] = useState({ name: "", category: "" })
     const [selectedItems, setSelectedItems] = useState<string[]>([])
+    const [isVerifyingSubscription, setIsVerifyingSubscription] = useState(true)
+    const [subscriptionError, setSubscriptionError] = useState<string | null>(null)
     const router = useRouter()
     const { isLoaded, isSignedIn } = useAuth()
     const { 
@@ -52,28 +56,83 @@ export default function DashboardPage() {
     } = useNewsletter()
 
     useEffect(() => {
-        const verifySubscription = async () => {
-            if (!isLoaded) return
+        async function verifySubscription() {
+            if (!isLoaded) return;
             
             try {
-                const response = await fetch('/api/check-subscription')
-                const data = await response.json()
+                const response = await checkSubscriptionStatus();
                 
-                if (!data.subscribed) {
-                    router.push('/#plans')
+                // Handle error case first
+                if (response.error) {
+                    setSubscriptionError(response.error);
+                    return;
+                }
+                
+                // Only redirect if not subscribed
+                if (!response.subscribed) {
+                    router.push('/#plans');
                 }
             } catch (error) {
-                console.error('Subscription verification failed:', error)
-                router.push('/#plans')
+                console.error('Subscription verification failed:', error);
+                setSubscriptionError('Failed to verify subscription status. Please try again.');
+            } finally {
+                setIsVerifyingSubscription(false);
             }
         }
+    
+        verifySubscription();
+    }, [isSignedIn, isLoaded, router]);
 
-        if (isSignedIn) {
-            verifySubscription()
-        } else {
-            router.push('/')
-        }
-    }, [isSignedIn, isLoaded, router])
+    // If still loading auth or verifying subscription, show loading state
+    if (!isLoaded || isVerifyingSubscription) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="text-center">
+                    <Loader className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+                    <p className="text-muted-foreground">Loading Data...</p>
+                </div>
+            </div>
+        )
+    }
+
+    // If user is not signed in, they will be redirected in the useEffect
+    if (!isSignedIn) {
+        return null
+    }
+    
+    // Show subscription error if there was a problem verifying
+    if (subscriptionError) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <GlassCard className="max-w-md w-full">
+                    <GlassCardHeader>
+                        <div className="flex items-center gap-3">
+                            <AlertTriangle className="h-6 w-6 text-yellow-500" />
+                            <h3 className="text-lg font-semibold">Subscription Verification Error</h3>
+                        </div>
+                    </GlassCardHeader>
+                    <GlassCardContent>
+                        <p className="mb-4">{subscriptionError}</p>
+                        <div className="flex justify-between">
+                            <Button 
+                                variant="outline" 
+                                onClick={() => {
+                                    setIsVerifyingSubscription(true)
+                                    setSubscriptionError(null)
+                                    window.location.reload()
+                                }}
+                            >
+                                Try Again
+                            </Button>
+                            <Button asChild>
+                                <a href="/#plans">View Plans</a>
+                            </Button>
+                        </div>
+                    </GlassCardContent>
+                </GlassCard>
+            </div>
+        )
+    }
 
     const handleItemSelect = (activityId: string) => {
         setSelectedItems(prev => {
@@ -426,59 +485,59 @@ export default function DashboardPage() {
                                         </>
                                     )}
                                 </Button>
-
-                                <AnimatePresence>
-                                    {socialChecks[searchTerm] && (
-                                        <motion.div
-                                            initial={{ opacity: 0, y: 20 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, scale: 0.95 }}
-                                            className="grid grid-cols-1 md:grid-cols-3 gap-4"
-                                        >
-                                            {[
-                                                { name: 'Twitter', icon: Twitter, color: 'text-blue-400', result: socialChecks[searchTerm].twitter },
-                                                { name: 'Instagram', icon: Instagram, color: 'text-pink-500', result: socialChecks[searchTerm].instagram },
-                                                { name: 'Facebook', icon: Facebook, color: 'text-blue-600', result: socialChecks[searchTerm].facebook }
-                                            ].map((platform) => (
-                                                <div
-                                                    key={platform.name}
-                                                    className={cn(
-                                                        "flex items-center justify-between p-4 rounded-lg border",
-                                                        "hover:border-primary/50 transition-colors"
-                                                    )}
-                                                >
-                                                    <div className="flex items-center gap-2">
-                                                        <platform.icon className={`h-5 w-5 ${platform.color}`} />
-                                                        <span>{platform.name}</span>
-                                                    </div>
-                                                    <Badge
-                                                        variant={platform.result ? "default" : "destructive"}
-                                                        className={platform.result ? 
-                                                            "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : 
-                                                            "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                                                        }
-                                                    >
-                                                        {platform.result ? "Available" : "Taken"}
-                                                    </Badge>
-                                                </div>
-                                            ))}
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
-
-                                {searchTerm && socialChecks[searchTerm] && (
-                                    <div className="text-center pt-4">
-                                        <Button
-                                            variant="outline"
-                                            onClick={() => {
-                                                setSearchTerm("")
-                                            }}
-                                        >
-                                            Check Another Name
-                                        </Button>
-                                    </div>
-                                )}
                             </div>
+
+                            <AnimatePresence>
+                                {socialChecks[searchTerm] && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, scale: 0.95 }}
+                                        className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6"
+                                    >
+                                        {[
+                                            { name: 'Twitter', icon: Twitter, color: 'text-blue-400', result: socialChecks[searchTerm].twitter },
+                                            { name: 'Instagram', icon: Instagram, color: 'text-pink-500', result: socialChecks[searchTerm].instagram },
+                                            { name: 'Facebook', icon: Facebook, color: 'text-blue-600', result: socialChecks[searchTerm].facebook }
+                                        ].map((platform) => (
+                                            <div
+                                                key={platform.name}
+                                                className={cn(
+                                                    "flex items-center justify-between p-4 rounded-lg border",
+                                                    "hover:border-primary/50 transition-colors"
+                                                )}
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <platform.icon className={`h-5 w-5 ${platform.color}`} />
+                                                    <span>{platform.name}</span>
+                                                </div>
+                                                <Badge
+                                                    variant={platform.result ? "default" : "destructive"}
+                                                    className={platform.result ? 
+                                                        "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : 
+                                                        "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                                                    }
+                                                >
+                                                    {platform.result ? "Available" : "Taken"}
+                                                </Badge>
+                                            </div>
+                                        ))}
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
+                            {searchTerm && socialChecks[searchTerm] && (
+                                <div className="text-center pt-4">
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => {
+                                            setSearchTerm("")
+                                        }}
+                                    >
+                                        Check Another Name
+                                    </Button>
+                                </div>
+                            )}
                         </GlassCardContent>
                     </GlassCard>
                 </TabsContent>

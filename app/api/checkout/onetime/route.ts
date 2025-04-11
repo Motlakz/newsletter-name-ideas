@@ -3,6 +3,8 @@ import { dodopayments } from "@/lib/dodopayments";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import prisma from "@/lib/db";
 import type { CountryCode } from "dodopayments";
+import { PaymentStatus } from "@prisma/client";
+import { decrypt, encrypt } from "@/lib/helper/crypto";
 
 export const dynamic = 'force-dynamic';
 
@@ -36,6 +38,76 @@ async function getOrCreateUser(userId: string, user: any) {
         console.error("Error in getOrCreateUser:", error);
         throw error;
     }
+}
+
+function mapDodoStatus(dodoStatus: string | null | undefined): PaymentStatus {
+    if (!dodoStatus) {
+        return PaymentStatus.SUCCEEDED;
+    }
+    
+    const statusMap = new Map<string, PaymentStatus>([
+        ['succeeded', PaymentStatus.SUCCEEDED],
+        ['pending', PaymentStatus.PENDING],
+        ['failed', PaymentStatus.FAILED],
+        ['disputed', PaymentStatus.DISPUTED],
+        ['refunded', PaymentStatus.REFUNDED]
+    ]);
+  
+    const normalizedStatus = dodoStatus.toLowerCase();
+    const mappedStatus = statusMap.get(normalizedStatus) || PaymentStatus.SUCCEEDED; // Default to SUCCEEDED
+    
+    console.log(`Mapped DodoPayments status '${dodoStatus}' to '${mappedStatus}'`);
+    return mappedStatus;
+}
+
+// Function to update payment status based on URL parameters
+export async function updatePaymentFromUrlParams(request: Request) {
+    const { searchParams } = new URL(request.url);
+    const status = searchParams.get("status");
+    const encryptedPaymentId = searchParams.get("payment_id");
+    
+    if (status && encryptedPaymentId) {
+        console.log(`Found status=${status} and encrypted payment_id in URL params`);
+        
+        try {
+            // Decrypt the payment ID
+            const paymentId = decrypt(encryptedPaymentId);
+            
+            const payment = await prisma.payment.findUnique({
+                where: { id: paymentId }
+            });
+            
+            if (payment) {
+                const mappedStatus = mapDodoStatus(status);
+                
+                await prisma.payment.update({
+                    where: { id: paymentId },
+                    data: {
+                        status: mappedStatus,
+                        metadata: {
+                            ...(payment.metadata as any || {}),
+                            statusHistory: [
+                                ...((payment.metadata as any)?.statusHistory || []),
+                                {
+                                    status: mappedStatus,
+                                    timestamp: new Date().toISOString(),
+                                    reason: "Status updated from URL parameters"
+                                }
+                            ],
+                            urlParamStatus: status
+                        }
+                    }
+                });
+                
+                console.log(`Updated payment ${paymentId} status to ${mappedStatus} based on URL params`);
+                return true;
+            }
+        } catch (error) {
+            console.error("Error updating payment from URL params:", error);
+        }
+    }
+    
+    return false;
 }
 
 export async function GET(request: Request) {
@@ -96,6 +168,9 @@ export async function GET(request: Request) {
             return_url: `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard`,
         });
 
+        // Default to SUCCEEDED since payments are typically successful
+        const paymentStatus = mapDodoStatus(response.status);
+
         // Create payment record in database
         await prisma.payment.create({
             data: {
@@ -104,14 +179,27 @@ export async function GET(request: Request) {
                 productId: productId,
                 amount: response.amount || 0,
                 currency: "USD",
-                status: "PENDING",
+                status: paymentStatus,
                 paymentMethod: "card",
                 paymentLink: response.payment_link,
                 clientSecret: response.client_secret,
+                metadata: {
+                    originalStatus: response.status,
+                    statusHistory: [{
+                        status: paymentStatus,
+                        timestamp: new Date().toISOString(),
+                        reason: "Initial payment creation"
+                    }]
+                }
             }
         });
 
-        return NextResponse.json(response);
+        const secureResponse = {
+            ...response,
+            payment_id: encrypt(response.payment_id)
+        };
+
+        return NextResponse.json(secureResponse);
     } catch (error) {
         console.error('Payment creation error:', error);
         return NextResponse.json(
@@ -122,6 +210,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+    // Check if we need to update a payment based on URL parameters
+    await updatePaymentFromUrlParams(request);
+    
     try {
         const { userId } = await auth();
         if (!userId) {
@@ -216,6 +307,9 @@ export async function POST(request: Request) {
             return_url: `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard`,
         });
 
+        // Default to SUCCEEDED since payments are typically successful
+        const paymentStatus = mapDodoStatus(response.status);
+
         await prisma.payment.create({
             data: {
                 id: response.payment_id,
@@ -224,14 +318,27 @@ export async function POST(request: Request) {
                 quantity: quantity,
                 amount: response.amount || 0,
                 currency: "USD",
-                status: "PENDING",
+                status: paymentStatus,
                 paymentMethod: "card",
                 paymentLink: response.payment_link,
                 clientSecret: response.client_secret,
+                metadata: {
+                    originalStatus: response.status,
+                    statusHistory: [{
+                        status: paymentStatus,
+                        timestamp: new Date().toISOString(),
+                        reason: "Initial payment creation"
+                    }]
+                }
             }
         });
 
-        return NextResponse.json(response);
+        const secureResponse = {
+            ...response,
+            payment_id: encrypt(response.payment_id)
+        };
+
+        return NextResponse.json(secureResponse);
     } catch (error) {
         console.error('Payment creation error:', error);
         

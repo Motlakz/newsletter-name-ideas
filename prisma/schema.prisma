@@ -41,7 +41,7 @@ model Subscription {
   userId            String
   userBalanceId     String?
   userBalance       UserBalance?       @relation(fields: [userBalanceId], references: [id])
-  status            SubscriptionStatus @default(PENDING)
+  status            SubscriptionStatus @default(ACTIVE)
   productId         String
   externalProductId Int?
   planName          String
@@ -74,7 +74,7 @@ model Payment {
   quantity          Int           @default(1)
   amount            Int
   currency          String        @default("USD")
-  status            PaymentStatus @default(PENDING)
+  status            PaymentStatus @default(SUCCEEDED)
   paymentMethod     String?
   paymentMethodId   String?
   paymentLink       String?

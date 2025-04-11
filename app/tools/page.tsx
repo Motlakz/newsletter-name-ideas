@@ -12,6 +12,8 @@ import { useAuth } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
 import { checkSubscriptionStatus } from '@/actions/data'
 import { GeneratedName } from '@/types/templates'
+import { SocialHandleCheck } from '@/types/data'
+import { usePremiumProtection } from '@/hooks/use-premium-protection'
 
 type DomainResult = {
   domain: string;
@@ -24,9 +26,8 @@ type DomainResult = {
 }
 
 export default function ToolsPage() {
-  const { isSignedIn } = useAuth()
+  const { userId } = useAuth()
   const router = useRouter()
-  const [isPremium, setIsPremium] = useState(false)
   const [domainName, setDomainName] = useState('')
   const [domainResults, setDomainResults] = useState<DomainResult[]>([])
   const [seoName, setSeoName] = useState('')
@@ -39,41 +40,84 @@ export default function ToolsPage() {
     available: boolean
   }>>([])
 
-  useEffect(() => {
-    const checkPremium = async () => {
-      try {
-        const { subscribed } = await checkSubscriptionStatus()
-        setIsPremium(subscribed)
-      } catch (error) {
-        console.error('Subscription check failed:', error)
-        setIsPremium(false)
-      }
-    }
-    if (isSignedIn) checkPremium()
-  }, [isSignedIn])
+  const { isPremium, overlayVisible } = usePremiumProtection(userId ?? "")
 
   const PremiumOverlay = () => (
     <div 
-      className="absolute inset-0 z-10 backdrop-blur-md bg-black/60 cursor-pointer rounded-lg flex items-center justify-center"
+      className="absolute inset-0 z-50 backdrop-blur-md bg-black/70 dark:bg-black/40 cursor-pointer rounded-lg flex items-center border-2 justify-center"
       onClick={() => router.push('/#plans')}
+      onContextMenu={(e) => {
+        e.preventDefault()
+        router.push('/#plans')
+      }}
+      style={{
+        pointerEvents: 'auto',
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+        MozUserSelect: 'none'
+      }}
     >
-      <div className="flex flex-col items-center justify-center gap-3 text-center p-6 max-w-md mx-auto">
-        <Lock className="h-12 w-12 text-primary animate-pulse" />
-        <h3 className="text-2xl font-semibold text-primary">Premium Feature</h3>
-        <p className="text-white/90 mb-2">Upgrade to check availability of social media handles across platforms</p>
+      <div className="text-center p-6 max-w-md mx-auto">
+        <Lock className="h-12 w-12 text-purple-400 animate-pulse mx-auto mb-4" />
+        <h3 className="text-2xl font-semibold text-purple-400 mb-2">
+          Premium Feature
+        </h3>
+        <p className="text-white/90 mb-4">
+          Upgrade to unlock social media handle checking
+        </p>
         <Button 
           variant="secondary" 
-          className="mt-4 font-medium px-6 py-2" 
+          className="px-6 py-2 text-white hover:bg-purple-500 transition-colors"
           onClick={(e) => {
             e.stopPropagation()
             router.push('/#plans')
           }}
         >
-          Upgrade to Premium
+          Upgrade Now
         </Button>
       </div>
     </div>
   )
+
+  const handleSocialCheck = async () => {
+    startTransition(async () => {
+      try {
+        // Dual validation: client-side and server-side
+        if (!isPremium || !(await validatePremiumStatus())) {
+          router.push('/#plans')
+          return
+        }
+
+        // Sanitize input and validate format
+        const cleanHandle = handleName
+          .replace(/[^a-zA-Z0-9_]/g, '')
+          .substring(0, 20)
+          
+        if (cleanHandle.length < 3) {
+          throw new Error('Handle must be at least 3 characters')
+        }
+
+        const results = await checkSocialMediaHandles(cleanHandle)
+        setSocialResults(results)
+      } catch (error) {
+        console.error('Social check failed:', error)
+      }
+    })
+  }
+
+  const validatePremiumStatus = async () => {
+    try {
+      const res = await fetch('/api/validate-premium', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+        credentials: 'same-origin'
+      })
+      return (await res.json()).valid
+    } catch (error) {
+      return false
+    }
+  }
 
   // Domain Checker Functions
   const handleDomainCheck = async () => {
@@ -258,22 +302,6 @@ export default function ToolsPage() {
         setGeneratedNames(names)
       } catch (error) {
         console.error('SEO analysis failed:', error)
-      }
-    })
-  }
-
-  const handleSocialCheck = async () => {
-    if (!isPremium) {
-      router.push('/#plans')
-      return
-    }
-
-    startTransition(async () => {
-      try {
-        const results = await checkSocialMediaHandles(handleName)
-        setSocialResults(results)
-      } catch (error) {
-        console.error('Social check failed:', error)
       }
     })
   }
@@ -488,7 +516,7 @@ export default function ToolsPage() {
 
             <TabsContent value="social">
               <GlassCard className="relative overflow-hidden">
-                {!isPremium && <PremiumOverlay />}
+                {overlayVisible && <PremiumOverlay />}
                 <GlassCardHeader>
                   <h2 className="text-2xl font-semibold">Social Media Handle Checker</h2>
                   <p className="text-muted-foreground">

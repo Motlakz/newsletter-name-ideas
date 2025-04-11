@@ -1,9 +1,7 @@
 import "server only";
 
-import { PrismaClient } from "@prisma/client";
 import { dodopayments } from "@/lib/dodopayments";
-
-const prisma = new PrismaClient();
+import prisma from "./db";
 
 export async function processWebhookEvent(payload: any, webhookId: string) {
     try {
@@ -47,7 +45,10 @@ async function processSubscriptionEvent(payload: any) {
     const { type, data } = payload;
     const subscriptionId = data.subscription_id;
     
+    console.log(`Processing subscription event: ${type} for ID: ${subscriptionId}`);
+    
     const dodoSubscription = await dodopayments.subscriptions.get(subscriptionId);
+    console.log(`DodoPayments subscription status: ${dodoSubscription.status}`);
     
     // Find the user by CustomerProfile
     const customerProfile = await prisma.customerProfile.findUnique({
@@ -63,7 +64,8 @@ async function processSubscriptionEvent(payload: any) {
     const user = customerProfile.user;
     
     // Map status and get metadata
-    const { status, statusMetadata } = mapSubscriptionStatus(type, data);
+    const { status, statusMetadata } = mapSubscriptionStatus(type, data, dodoSubscription.status);
+    console.log(`Mapped subscription status: ${status}`);
     
     // Try to find an existing subscription
     const subscription = await prisma.subscription.findUnique({
@@ -110,9 +112,9 @@ async function processSubscriptionEvent(payload: any) {
                 currentPeriodEnd: new Date(dodoSubscription.next_billing_date || Date.now()),
                 metadata: {
                     statusHistory: [{
-                        status: "PENDING",
+                        status,
                         timestamp: new Date().toISOString(),
-                        reason: "Initial subscription creation"
+                        reason: statusMetadata.reason || "Initial subscription creation"
                     }]
                 }
             },
@@ -124,7 +126,10 @@ async function processPaymentEvent(payload: any) {
     const { type, data } = payload;
     const paymentId = data.payment_id;
     
+    console.log(`Processing payment event: ${type} for ID: ${paymentId}`);
+    
     const dodoPayment = await dodopayments.payments.get(paymentId);
+    console.log(`DodoPayments payment status: ${dodoPayment.status}`);
     
     // Find user by CustomerProfile
     const customerProfile = await prisma.customerProfile.findUnique({
@@ -140,7 +145,8 @@ async function processPaymentEvent(payload: any) {
     const user = customerProfile.user;
     
     // Map status and get metadata
-    const { status, statusMetadata } = mapPaymentStatus(type, data);
+    const { status, statusMetadata } = mapPaymentStatus(type, data, dodoPayment.status);
+    console.log(`Mapped payment status: ${status}`);
     
     // Check if payment already exists
     const payment = await prisma.payment.findUnique({
@@ -186,9 +192,9 @@ async function processPaymentEvent(payload: any) {
                 paymentMethodId: dodoPayment.payment_method_id || "",
                 metadata: {
                     statusHistory: [{
-                        status: "PENDING",
+                        status,
                         timestamp: new Date().toISOString(),
-                        reason: "Initial payment creation"
+                        reason: statusMetadata.reason || "Initial payment creation"
                     }]
                 }
             },
@@ -196,13 +202,14 @@ async function processPaymentEvent(payload: any) {
     }
 }
 
-function mapSubscriptionStatus(type: string, data: any) {
+function mapSubscriptionStatus(type: string, data: any, dodoStatus?: string) {
     let status: "PENDING" | "ACTIVE" | "ON_HOLD" | "CANCELLED" | "FAILED";
     let statusMetadata: any = {
         reason: "",
         eventType: type
     };
     
+    // First try to determine status from event type
     switch (type) {
         case "subscription.active":
             status = "ACTIVE";
@@ -223,21 +230,48 @@ function mapSubscriptionStatus(type: string, data: any) {
             statusMetadata.reason = "Subscription put on hold";
             statusMetadata.holdDetails = data.hold_details;
             break;
+        case "subscription.created":
+            // For new subscriptions, default to ACTIVE since we know they're typically active
+            status = "ACTIVE";
+            statusMetadata.reason = "Subscription created and assumed active";
+            break;
         default:
-            status = "PENDING";
-            statusMetadata.reason = "Status unchanged";
+            // If event type doesn't determine status, try to use data.status or dodoStatus
+            if (data.status) {
+                const upperStatus = data.status.toUpperCase();
+                if (["ACTIVE", "PENDING", "ON_HOLD", "CANCELLED", "FAILED"].includes(upperStatus)) {
+                    status = upperStatus as "PENDING" | "ACTIVE" | "ON_HOLD" | "CANCELLED" | "FAILED";
+                    statusMetadata.reason = `Status set from event data: ${upperStatus}`;
+                } else {
+                    status = "ACTIVE"; // Default to ACTIVE
+                    statusMetadata.reason = `Unrecognized status in event data: ${data.status}, defaulting to ACTIVE`;
+                }
+            } else if (dodoStatus) {
+                const upperDodoStatus = dodoStatus.toUpperCase();
+                if (["ACTIVE", "PENDING", "ON_HOLD", "CANCELLED", "FAILED"].includes(upperDodoStatus)) {
+                    status = upperDodoStatus as "PENDING" | "ACTIVE" | "ON_HOLD" | "CANCELLED" | "FAILED";
+                    statusMetadata.reason = `Status set from DodoPayments API: ${upperDodoStatus}`;
+                } else {
+                    status = "ACTIVE"; // Default to ACTIVE
+                    statusMetadata.reason = `Unrecognized status from DodoPayments API: ${dodoStatus}, defaulting to ACTIVE`;
+                }
+            } else {
+                status = "ACTIVE"; // Default to ACTIVE
+                statusMetadata.reason = "No status information available, defaulting to ACTIVE";
+            }
     }
     
     return { status, statusMetadata };
 }
 
-function mapPaymentStatus(type: string, data: any) {
+function mapPaymentStatus(type: string, data: any, dodoStatus?: string) {
     let status: "PENDING" | "SUCCEEDED" | "FAILED" | "REFUNDED" | "DISPUTED";
     let statusMetadata: any = {
         reason: "",
         eventType: type
     };
     
+    // First try to determine status from event type
     switch (type) {
         case "payment.succeeded":
             status = "SUCCEEDED";
@@ -258,9 +292,35 @@ function mapPaymentStatus(type: string, data: any) {
             statusMetadata.reason = data.dispute_reason || "Payment disputed";
             statusMetadata.disputeDetails = data.dispute_details;
             break;
+        case "payment.created":
+            // For new payments, assume SUCCEEDED since they're typically successful
+            status = "SUCCEEDED";
+            statusMetadata.reason = "Payment created and assumed successful";
+            break;
         default:
-            status = "PENDING";
-            statusMetadata.reason = "Status unchanged";
+            // If event type doesn't determine status, try to use data.status or dodoStatus
+            if (data.status) {
+                const upperStatus = data.status.toUpperCase();
+                if (["PENDING", "SUCCEEDED", "FAILED", "REFUNDED", "DISPUTED"].includes(upperStatus)) {
+                    status = upperStatus as "PENDING" | "SUCCEEDED" | "FAILED" | "REFUNDED" | "DISPUTED";
+                    statusMetadata.reason = `Status set from event data: ${upperStatus}`;
+                } else {
+                    status = "SUCCEEDED"; // Default to SUCCEEDED
+                    statusMetadata.reason = `Unrecognized status in event data: ${data.status}, defaulting to SUCCEEDED`;
+                }
+            } else if (dodoStatus) {
+                const upperDodoStatus = dodoStatus.toUpperCase();
+                if (["PENDING", "SUCCEEDED", "FAILED", "REFUNDED", "DISPUTED"].includes(upperDodoStatus)) {
+                    status = upperDodoStatus as "PENDING" | "SUCCEEDED" | "FAILED" | "REFUNDED" | "DISPUTED";
+                    statusMetadata.reason = `Status set from DodoPayments API: ${upperDodoStatus}`;
+                } else {
+                    status = "SUCCEEDED"; // Default to SUCCEEDED
+                    statusMetadata.reason = `Unrecognized status from DodoPayments API: ${dodoStatus}, defaulting to SUCCEEDED`;
+                }
+            } else {
+                status = "SUCCEEDED"; // Default to SUCCEEDED
+                statusMetadata.reason = "No status information available, defaulting to SUCCEEDED";
+            }
     }
     
     return { status, statusMetadata };

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Product } from "@/types/billing";
 import { useRouter } from "next/navigation";
 import { GlassCard } from "../ui/glass-card";
@@ -20,6 +20,10 @@ export default function ProductGlassCard({
   
     const checkoutProduct = async (productId: number, is_recurring: boolean) => {
         if (!isSignedIn) {
+            // Save the return URL in localStorage before redirecting
+            localStorage.setItem('returnToPlans', 'true');
+            
+            // Redirect to sign-in
             router.push("/sign-in");
             return;
         }
@@ -42,6 +46,21 @@ export default function ProductGlassCard({
             setLoading(false);
         }
     };
+    
+    // Check if user just signed in and should be redirected to plans
+    useEffect(() => {
+        if (isSignedIn && typeof window !== 'undefined') {
+            const shouldReturnToPlans = localStorage.getItem('returnToPlans') === 'true';
+            
+            if (shouldReturnToPlans) {
+                // Clear the flag
+                localStorage.removeItem('returnToPlans');
+                
+                // Redirect to plans section
+                router.push('/#plans');
+            }
+        }
+    }, [isSignedIn, router]);
   
     return (
         <GlassCard className={`rounded-3xl max-w-lg w-full ${isHighlighted ? 'ring-2 ring-primary' : ''}`}>

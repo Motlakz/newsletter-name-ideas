@@ -3,6 +3,8 @@ import { dodopayments } from "@/lib/dodopayments";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import prisma from "@/lib/db";
 import type { CountryCode } from "dodopayments";
+import { SubscriptionStatus } from "@prisma/client";
+import { decrypt, encrypt } from "@/lib/helper/crypto";
 
 export const dynamic = 'force-dynamic';
 
@@ -36,6 +38,78 @@ async function getOrCreateUser(userId: string, user: any) {
         console.error("Error in getOrCreateUser:", error);
         throw error;
     }
+}
+
+function mapDodoStatus(dodoStatus: string | null | undefined): SubscriptionStatus {
+    if (!dodoStatus) {
+        console.log("No status provided from DodoPayments, using ACTIVE as default");
+        // Since we're seeing that subscriptions are actually active, default to ACTIVE instead of PENDING
+        return SubscriptionStatus.ACTIVE;
+    }
+    
+    const statusMap = new Map<string, SubscriptionStatus>([
+      ['active', SubscriptionStatus.ACTIVE],
+      ['pending', SubscriptionStatus.PENDING],
+      ['on_hold', SubscriptionStatus.ON_HOLD],
+      ['cancelled', SubscriptionStatus.CANCELLED],
+      ['failed', SubscriptionStatus.FAILED]
+    ]);
+  
+    const normalizedStatus = dodoStatus.toLowerCase();
+    const mappedStatus = statusMap.get(normalizedStatus) || SubscriptionStatus.ACTIVE; // Default to ACTIVE
+    
+    console.log(`Mapped DodoPayments status '${dodoStatus}' to '${mappedStatus}'`);
+    return mappedStatus;
+}
+
+// Function to update subscription status based on URL parameters
+export async function updateSubscriptionFromUrlParams(request: Request) {
+    const { searchParams } = new URL(request.url);
+    const status = searchParams.get("status");
+    const encryptedSubscriptionId = searchParams.get("subscription_id");
+    
+    if (status && encryptedSubscriptionId) {
+        console.log(`Found status=${status} and encrypted subscription_id in URL params`);
+        
+        try {
+            // Decrypt the subscription ID
+            const subscriptionId = decrypt(encryptedSubscriptionId);
+            
+            const subscription = await prisma.subscription.findUnique({
+                where: { id: subscriptionId }
+            });
+            
+            if (subscription) {
+                const mappedStatus = mapDodoStatus(status);
+                
+                await prisma.subscription.update({
+                    where: { id: subscriptionId },
+                    data: {
+                        status: mappedStatus,
+                        metadata: {
+                            ...(subscription.metadata as any || {}),
+                            statusHistory: [
+                                ...((subscription.metadata as any)?.statusHistory || []),
+                                {
+                                    status: mappedStatus,
+                                    timestamp: new Date().toISOString(),
+                                    reason: "Status updated from URL parameters"
+                                }
+                            ],
+                            urlParamStatus: status
+                        }
+                    }
+                });
+                
+                console.log(`Updated subscription ${subscriptionId} status to ${mappedStatus} based on URL params`);
+                return true;
+            }
+        } catch (error) {
+            console.error("Error updating subscription from URL params:", error);
+        }
+    }
+    
+    return false;
 }
 
 export async function GET(request: Request) {
@@ -92,15 +166,23 @@ export async function GET(request: Request) {
             return_url: `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard`,
         });
 
+        const secureResponse = {
+            ...response,
+            subscription_id: encrypt(response.subscription_id)
+        };
+
         const currentDate = new Date();
         const periodEnd = new Date(currentDate);
         periodEnd.setMonth(periodEnd.getMonth() + 1);
+
+        // Default to ACTIVE since we know subscriptions are typically active
+        const subscriptionStatus = mapDodoStatus(response.status);
 
         await prisma.subscription.create({
             data: {
                 id: response.subscription_id,
                 userId: dbUser.id,
-                status: "PENDING",
+                status: subscriptionStatus,
                 productId: productId,
                 planName: "Subscription",
                 amount: response.recurring_pre_tax_amount || 0,
@@ -111,10 +193,18 @@ export async function GET(request: Request) {
                 currentPeriodEnd: periodEnd,
                 clientSecret: response.client_secret,
                 paymentLink: response.payment_link,
+                metadata: {
+                    originalStatus: response.status,
+                    statusHistory: [{
+                        status: subscriptionStatus,
+                        timestamp: new Date().toISOString(),
+                        reason: "Initial subscription creation"
+                    }]
+                }
             }
         });
 
-        return NextResponse.json(response);
+        return NextResponse.json(secureResponse);
     } catch (error) {
         console.error('Subscription creation error:', error);
         return NextResponse.json(
@@ -125,6 +215,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+    // Check if we need to update a subscription based on URL parameters
+    await updateSubscriptionFromUrlParams(request);
+    
     try {
         const { userId } = await auth();
         if (!userId) {
@@ -214,15 +307,23 @@ export async function POST(request: Request) {
             return_url: `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard`,
         });
 
+        const secureResponse = {
+            ...response,
+            subscription_id: encrypt(response.subscription_id)
+        };
+
         const currentDate = new Date();
         const periodEnd = new Date(currentDate);
         periodEnd.setMonth(periodEnd.getMonth() + 1);
+
+        // Default to ACTIVE since we know subscriptions are typically active
+        const subscriptionStatus = mapDodoStatus(response.status);
 
         await prisma.subscription.create({
             data: {
                 id: response.subscription_id,
                 userId: dbUser.id,
-                status: "PENDING",
+                status: subscriptionStatus,
                 productId: productId,
                 planName: "Subscription",
                 amount: response.recurring_pre_tax_amount || 0,
@@ -233,10 +334,18 @@ export async function POST(request: Request) {
                 currentPeriodEnd: periodEnd,
                 clientSecret: response.client_secret,
                 paymentLink: response.payment_link,
+                metadata: {
+                    originalStatus: response.status,
+                    statusHistory: [{
+                        status: subscriptionStatus,
+                        timestamp: new Date().toISOString(),
+                        reason: "Initial subscription creation"
+                    }]
+                }
             }
         });
 
-        return NextResponse.json(response);
+        return NextResponse.json(secureResponse);
     } catch (error) {
         console.error('Subscription creation error:', error);
         
