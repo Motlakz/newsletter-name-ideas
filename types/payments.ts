@@ -91,11 +91,4 @@ declare module 'dodopayments' {
     export class Products {
       list(params?: any): Promise<{ items: Product[] }>;
     }
-
-    export default class DodoPayments {
-      constructor(config: { bearerToken?: string });
-      subscriptions: Subscriptions;
-      payments: Payments;
-      products: Products
-    }
 }
