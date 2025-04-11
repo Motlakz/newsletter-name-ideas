@@ -1,16 +1,16 @@
 import { NextResponse } from "next/server";
 import { dodopayments } from "@/lib/dodopayments";
+import { Product } from "@/types/billing";
 
 export async function GET() {
-    try {
-        // Use type assertion to tell TypeScript that products exists
-        const products = await (dodopayments as any).products.list();
-        return NextResponse.json(products.items);
-    } catch (error) {
-        console.error(error);
-        return NextResponse.json(
-            { error: "Failed to fetch products" },
-            { status: 500 }
-        );
-    }
+  try {
+    const products = await dodopayments.products.list();
+    return NextResponse.json(products.items as Product[]);
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json(
+      { error: "Failed to fetch products" },
+      { status: 500 }
+    );
+  }
 }
