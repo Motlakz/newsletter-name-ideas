@@ -61,7 +61,7 @@ function mapDodoStatus(dodoStatus: string | null | undefined): PaymentStatus {
 }
 
 // Function to update payment status based on URL parameters
-export async function updatePaymentFromUrlParams(request: Request) {
+async function updatePaymentFromUrlParams(request: Request) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const encryptedPaymentId = searchParams.get("payment_id");
