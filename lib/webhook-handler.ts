@@ -1,4 +1,4 @@
-import "server only";
+"use server"
 
 import { dodopayments } from "@/lib/dodopayments";
 import prisma from "./db";
