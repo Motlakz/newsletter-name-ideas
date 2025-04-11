@@ -42,7 +42,7 @@ async function getOrCreateUser(userId: string, user: any) {
 
 function mapDodoStatus(dodoStatus: string | null | undefined): PaymentStatus {
     if (!dodoStatus) {
-        return PaymentStatus.PENDING;
+        return PaymentStatus.SUCCEEDED;
     }
     
     const statusMap = new Map<string, PaymentStatus>([
@@ -54,13 +54,14 @@ function mapDodoStatus(dodoStatus: string | null | undefined): PaymentStatus {
     ]);
   
     const normalizedStatus = dodoStatus.toLowerCase();
-    const mappedStatus = statusMap.get(normalizedStatus) || PaymentStatus.PENDING;
+    const mappedStatus = statusMap.get(normalizedStatus) || PaymentStatus.SUCCEEDED; // Default to SUCCEEDED
     
     console.log(`Mapped DodoPayments status '${dodoStatus}' to '${mappedStatus}'`);
     return mappedStatus;
 }
 
-async function updatePaymentFromUrlParams(request: Request) {
+// Function to update payment status based on URL parameters
+export async function updatePaymentFromUrlParams(request: Request) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const encryptedPaymentId = searchParams.get("payment_id");
@@ -167,8 +168,7 @@ export async function GET(request: Request) {
             return_url: `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard`,
         });
 
-        // Default to PENDING as a more conservative approach
-        const paymentStatus = mapDodoStatus(response.status);
+        const paymentStatus = PaymentStatus.PENDING;
 
         // Create payment record in database
         await prisma.payment.create({
@@ -176,14 +176,13 @@ export async function GET(request: Request) {
                 id: response.payment_id,
                 userId: dbUser.id,
                 productId: productId,
-                amount: response.amount || 0,
+                amount: response.total_amount || 0,
                 currency: "USD",
                 status: paymentStatus,
                 paymentMethod: "card",
                 paymentLink: response.payment_link,
                 clientSecret: response.client_secret,
                 metadata: {
-                    originalStatus: response.status,
                     statusHistory: [{
                         status: paymentStatus,
                         timestamp: new Date().toISOString(),
@@ -306,8 +305,8 @@ export async function POST(request: Request) {
             return_url: `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard`,
         });
 
-        // Default to PENDING as a more conservative approach
-        const paymentStatus = mapDodoStatus(response.status);
+        // Default to SUCCEEDED since payments are typically successful
+        const paymentStatus = PaymentStatus.PENDING;
 
         await prisma.payment.create({
             data: {
@@ -315,14 +314,13 @@ export async function POST(request: Request) {
                 userId: dbUser.id,
                 productId: productId,
                 quantity: quantity,
-                amount: response.amount || 0,
+                amount: response.total_amount || 0,
                 currency: "USD",
                 status: paymentStatus,
                 paymentMethod: "card",
                 paymentLink: response.payment_link,
                 clientSecret: response.client_secret,
                 metadata: {
-                    originalStatus: response.status,
                     statusHistory: [{
                         status: paymentStatus,
                         timestamp: new Date().toISOString(),

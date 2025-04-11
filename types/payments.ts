@@ -71,7 +71,7 @@ declare module 'dodopayments' {
       payment_link?: string;
       client_secret?: string;
       amount?: number;
-      status?: string;
+      status: string;
     }
   
     export class Subscriptions {

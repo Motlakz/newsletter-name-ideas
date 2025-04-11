@@ -3,7 +3,7 @@ import { dodopayments } from "@/lib/dodopayments";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import prisma from "@/lib/db";
 import type { CountryCode } from "dodopayments";
-import { SubscriptionStatus } from "@prisma/client";
+import { PaymentStatus, SubscriptionStatus } from "@prisma/client";
 import { decrypt, encrypt } from "@/lib/helper/crypto";
 
 export const dynamic = 'force-dynamic';
@@ -168,7 +168,7 @@ export async function GET(request: Request) {
         const periodEnd = new Date(currentDate);
         periodEnd.setMonth(periodEnd.getMonth() + 1);
 
-        const subscriptionStatus = mapDodoStatus(response.status);
+        const subscriptionStatus = PaymentStatus.PENDING;
 
         await prisma.subscription.create({
             data: {
@@ -186,7 +186,6 @@ export async function GET(request: Request) {
                 clientSecret: response.client_secret,
                 paymentLink: response.payment_link,
                 metadata: {
-                    originalStatus: response.status,
                     statusHistory: [{
                         status: subscriptionStatus,
                         timestamp: new Date().toISOString(),
@@ -308,7 +307,7 @@ export async function POST(request: Request) {
         const periodEnd = new Date(currentDate);
         periodEnd.setMonth(periodEnd.getMonth() + 1);
 
-        const subscriptionStatus = mapDodoStatus(response.status);
+        const subscriptionStatus = PaymentStatus.PENDING;
 
         await prisma.subscription.create({
             data: {
@@ -326,7 +325,6 @@ export async function POST(request: Request) {
                 clientSecret: response.client_secret,
                 paymentLink: response.payment_link,
                 metadata: {
-                    originalStatus: response.status,
                     statusHistory: [{
                         status: subscriptionStatus,
                         timestamp: new Date().toISOString(),
