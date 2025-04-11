@@ -3,7 +3,8 @@ import { dodopayments } from "@/lib/dodopayments";
 
 export async function GET() {
     try {
-        const products = await dodopayments.products.list();
+        // Use type assertion to tell TypeScript that products exists
+        const products = await (dodopayments as any).products.list();
         return NextResponse.json(products.items);
     } catch (error) {
         console.error(error);
