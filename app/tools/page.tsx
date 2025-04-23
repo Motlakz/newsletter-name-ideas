@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,9 +10,7 @@ import { Globe, Search, CheckCircle, XCircle, Loader, AlertTriangle, Lock } from
 import { checkDomainAvailability, checkSocialMediaHandles, checkTLDAvailability, generateNames } from '@/lib/actions'
 import { useAuth } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
-import { checkSubscriptionStatus } from '@/actions/data'
 import { GeneratedName } from '@/types/templates'
-import { SocialHandleCheck } from '@/types/data'
 import { usePremiumProtection } from '@/hooks/use-premium-protection'
 
 type DomainResult = {
