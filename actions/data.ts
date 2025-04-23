@@ -79,6 +79,31 @@ async function ensureSubscribedUser() {
 }
 
 /**
+ * Check subscription status
+ */
+export async function checkSubscriptionStatus(): Promise<{
+  subscribed: boolean;
+  error?: string;
+}> {
+  try {
+    const { userId } = await auth();
+    if (!userId) return { subscribed: false, error: 'Unauthorized' };
+
+    const hasSubscription = await checkSubscription(userId);
+    return { 
+      subscribed: hasSubscription,
+      ...(!hasSubscription && { error: 'No active subscription found' })
+    };
+  } catch (error) {
+    console.error('Error checking subscription:', error);
+    return { 
+      subscribed: false,
+      error: error instanceof Error ? error.message : 'Subscription check failed'
+    };
+  }
+}
+
+/**
  * Track user activity
  */
 export async function trackActivity(type: ActivityType, name: string) {
@@ -377,29 +402,3 @@ export async function searchSavedNames(searchTerm: string) {
     throw new ActionError('Failed to search names')
   }
 }
-
-/**
- * Check subscription status
- */
-export async function checkSubscriptionStatus(): Promise<{
-  subscribed: boolean;
-  error?: string;
-}> {
-  try {
-    const { userId } = await auth();
-    if (!userId) return { subscribed: false, error: 'Unauthorized' };
-
-    const hasSubscription = await checkSubscription(userId);
-    return { 
-      subscribed: hasSubscription,
-      ...(!hasSubscription && { error: 'No active subscription found' })
-    };
-  } catch (error) {
-    console.error('Error checking subscription:', error);
-    return { 
-      subscribed: false,
-      error: error instanceof Error ? error.message : 'Subscription check failed'
-    };
-  }
-}
-
