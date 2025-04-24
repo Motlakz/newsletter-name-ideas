@@ -10,6 +10,7 @@ import { NewsletterProvider } from "@/context/NewsletterContext"
 import {
   ClerkProvider,
 } from '@clerk/nextjs'
+import TinyAdzBanner from "@/components/common/tiny-adz-banner"
 
 const quicksand = Quicksand({ subsets: ["latin"] })
 
@@ -69,6 +70,7 @@ export default function RootLayout({
               <Toaster />
             </NewsletterProvider>
           </ThemeProvider>
+          <TinyAdzBanner />
         </body>
       </html>
     </ClerkProvider>
