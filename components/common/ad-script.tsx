@@ -14,7 +14,7 @@ const AdScript = () => {
                 w['.']=a;
                 j.src='//pubtagmanager.com/ptm.js?id='+a+dl+r;
                 f.parentNode.insertBefore(j,f);
-            })(window,document,'script','3680');
+            })(window,document,'script','3681');
             `}
         </Script>
     )
