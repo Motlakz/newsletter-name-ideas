@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils"
 import { motion, AnimatePresence } from "framer-motion"
 import { GeneratedName, TemplatePreset } from "@/types/templates"
 import { useNewsletter } from "@/context/NewsletterContext"
+import AdScript from "./common/ad-script"
 
 export default function NewsletterNameGenerator() {
   const [topic, setTopic] = useState("")
@@ -725,6 +726,7 @@ export default function NewsletterNameGenerator() {
           </motion.div>
         </TabsContent>
       </Tabs>
+      <AdScript />
     </div>
   )
 }
