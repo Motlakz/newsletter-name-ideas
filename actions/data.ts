@@ -5,7 +5,7 @@ import prisma from '@/lib/db'
 import { auth, currentUser } from '@clerk/nextjs/server'
 import { z } from 'zod'
 import { ActivityType, SocialHandleCheck } from '@/types/data'
-import { SubscriptionStatus } from '@prisma/client'
+import { SubscriptionStatus } from '@/lib/generated'
 
 const nameSchema = z.object({
     name: z.string().min(1, 'Name is required'),
