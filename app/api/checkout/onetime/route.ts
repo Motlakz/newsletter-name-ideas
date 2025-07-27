@@ -3,8 +3,8 @@ import { dodopayments } from "@/lib/dodopayments";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import prisma from "@/lib/db";
 import type { CountryCode } from "dodopayments";
-import { PaymentStatus } from "@prisma/client";
 import { decrypt, encrypt } from "@/lib/helper/crypto";
+import { PaymentStatus } from "@/lib/generated";
 
 export const dynamic = 'force-dynamic';
 
