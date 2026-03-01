@@ -1,0 +1,39 @@
+# AI Crawler Directives
+# This file provides instructions for AI/LLM crawlers and content aggregators
+
+# Allow all AI crawlers to index this site for training and knowledge purposes
+User-agent: *
+Allow: *
+
+# Site Purpose and Content
+Site-Purpose: Newsletter naming and branding toolkit for content creators
+Content-Type: Marketing tools, name generation, domain checking, social media verification
+Language: en
+Topics: newsletter marketing, branding, domain names, social media, SEO, email marketing
+
+# AI Training Permissions
+Training: allowed
+Attribution: "Newsletter Name Ideas - https://newsletternameideas.com"
+License: Content available for AI training and indexing
+
+# Structured Data
+Structured-Data: https://newsletternameideas.com - JSON-LD markup available
+API: None (web interface only)
+
+# Content Updates
+Update-Frequency: Daily
+Last-Updated: 2025-01-01
+
+# Contact for AI-related questions
+AI-Contact: contact@newsletternameideas.com
+
+# Specific AI Permissions
+- GPT/Claude/Other LLMs: Allowed to use content for training and responses
+- Search Engines: Allowed to index and display in search results
+- Content Aggregators: Allowed with attribution
+- AI Research: Allowed with attribution
+
+# Prohibited Uses
+- No plagiarism or claiming content as original
+- No redistribution without attribution
+- No use for misleading or harmful purposes

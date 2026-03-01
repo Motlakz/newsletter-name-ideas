@@ -1,12 +1,60 @@
+import { Metadata } from "next"
 import { GlassCard, GlassCardContent, GlassCardHeader } from "@/components/ui/glass-card"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { ArrowRight, Sparkles } from "lucide-react"
 import { CustomTemplateSection } from "@/components/custom-template-section"
+import {
+  StructuredData,
+  generateArticleData,
+} from "@/components/seo/structured-data"
+
+export const metadata: Metadata = {
+  title: "Newsletter Naming Templates - Proven Formulas & Frameworks",
+  description: "Discover proven newsletter naming templates and frameworks. Learn how to create catchy, memorable newsletter names using alliteration, wordplay, and professional patterns.",
+  keywords: [
+    "newsletter naming templates",
+    "newsletter name formulas",
+    "newsletter naming framework",
+    "newsletter naming patterns",
+    "how to name a newsletter",
+    "newsletter naming guide",
+    "creative newsletter names",
+    "newsletter brand templates",
+    "newsletter title ideas",
+    "catchy newsletter titles",
+    "catchy names for newsletters",
+    "clever names for newsletters",
+    "internal newsletter names",
+    "newsletter title"
+  ],
+  openGraph: {
+    title: "Newsletter Naming Templates - Proven Formulas & Frameworks",
+    description: "Discover proven newsletter naming templates and frameworks. Learn how to create catchy, memorable newsletter names.",
+    url: "https://newsletternameideas.com/templates",
+    type: "article",
+  },
+  alternates: {
+    canonical: "https://newsletternameideas.com/templates",
+  },
+}
 
 export default function TemplatesPage() {
+  const currentDate = new Date().toISOString()
+
   return (
-    <div className="bg-background">
+    <>
+      {/* Structured Data for SEO */}
+      <StructuredData
+        data={generateArticleData({
+          title: "Newsletter Naming Templates - Proven Formulas & Frameworks",
+          description: "Discover proven newsletter naming templates and frameworks. Learn how to create catchy, memorable newsletter names using alliteration, wordplay, and professional patterns.",
+          datePublished: "2025-01-01",
+          dateModified: currentDate.split('T')[0],
+        })}
+      />
+
+      <div className="bg-background">
       <div className="container mx-auto px-4 py-12">
         <header className="mb-12 text-center">
           <h1 className="text-4xl font-bold mb-4">Newsletter Naming Templates</h1>
@@ -132,5 +180,6 @@ export default function TemplatesPage() {
         </div>
       </div>
     </div>
+    </>
   )
 }

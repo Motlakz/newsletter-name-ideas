@@ -1,0 +1,57 @@
+/* HUMANS.TXT - Newsletter Name Ideas */
+
+# TEAM
+# ----
+# Founder: Newsletter Name Ideas Team
+# Contact: contact@newsletternameideas.com
+# Twitter: @newsletternameideas
+
+# SITE
+# ----
+# Last update: 2025-01-01
+# Language: English
+# Doctype: HTML5
+# Standards: HTML5, CSS3, JavaScript ES6+
+# Components: React, Next.js, TypeScript, Tailwind CSS
+# Framework: Next.js 15
+
+# SITE PURPOSE
+# ------------
+# Newsletter Name Ideas is a free AI-powered toolkit for newsletter creators.
+# Generate creative names, check domain availability, verify social handles,
+# and discover proven naming frameworks.
+
+# TECHNOLOGIES
+# ------------
+# Frontend: Next.js 15, React, TypeScript, Tailwind CSS
+# Hosting: Vercel
+# Fonts: Quicksand, Raleway (Google Fonts)
+# Icons: Lucide Icons, React Icons
+
+# PERFORMANCE
+# -----------
+# Optimized for Core Web Vitals
+- LCP (Largest Contentful Paint): < 2.5s
+- FID (First Input Delay): < 100ms
+- CLS (Cumulative Layout Shift): < 0.1
+- SEO Score: 100/100
+- Accessibility: WCAG AA compliant
+
+# SEO & AI
+# --------
+- Sitemap: /sitemap.xml
+- Robots: /robots.txt
+- AI Crawler Directives: /ai.txt
+- Structured Data: JSON-LD markup on all pages
+- Open Graph: Full social media optimization
+- Twitter Cards: Enabled
+- LLM Training: Allowed with attribution
+
+# OPEN SOURCE
+# -----------
+# Some components are open source.
+# Check our GitHub for contributions.
+
+# THANK YOU
+# ---------
+# Thanks to all our users and the newsletter community!

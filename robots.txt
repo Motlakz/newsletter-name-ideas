@@ -1,7 +1,50 @@
+# Allow all search engines and AI crawlers
 User-agent: *
+Allow: /
+Crawl-delay: 1
+
+# Disallow admin and private areas
+Disallow: /api/
 Disallow: /admin/
 Disallow: /private/
 Disallow: /dashboard/
+Disallow: /_next/
+Disallow: /static/
+
+# Allow major AI/LLM crawlers for training and indexing
+User-agent: GPTBot
 Allow: /
 
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: CCbot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: YouBot
+Allow: /
+
+User-agent: Amazonbot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+# Sitemap references
 Sitemap: https://newsletternameideas.com/sitemap.xml
+
+# Additional SEO directives
+# Allow scraping for content aggregation and AI training purposes
+# This site provides structured data markup for better machine understanding

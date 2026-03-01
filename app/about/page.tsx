@@ -1,12 +1,54 @@
+import { Metadata } from "next"
 import { GlassCard, GlassCardContent } from "@/components/ui/glass-card"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import Image from "next/image"
 import { Sparkles, Users, Lightbulb, ArrowRight } from "lucide-react"
+import {
+  StructuredData,
+  generateOrganizationData,
+  generateArticleData,
+} from "@/components/seo/structured-data"
+
+export const metadata: Metadata = {
+  title: "About Newsletter Name Ideas - Newsletter Naming Toolkit",
+  description: "Learn about Newsletter Name Ideas - the complete toolkit for newsletter creators featuring AI-powered name generation, domain checking, and social media verification.",
+  keywords: [
+    "about newsletter name ideas",
+    "newsletter naming toolkit",
+    "newsletter branding tools",
+    "newsletter generator",
+    "email newsletter tools",
+    "newsletter platform"
+  ],
+  openGraph: {
+    title: "About Newsletter Name Ideas - Newsletter Naming Toolkit",
+    description: "Learn about Newsletter Name Ideas - the complete toolkit for newsletter creators featuring AI-powered name generation.",
+    url: "https://newsletternameideas.com/about",
+    type: "website",
+  },
+  alternates: {
+    canonical: "https://newsletternameideas.com/about",
+  },
+}
 
 export default function AboutPage() {
+  const currentDate = new Date().toISOString()
+
   return (
-    <div className="bg-background">
+    <>
+      {/* Structured Data for SEO */}
+      <StructuredData data={generateOrganizationData()} />
+      <StructuredData
+        data={generateArticleData({
+          title: "About Newsletter Name Ideas - Newsletter Naming Toolkit",
+          description: "Learn about Newsletter Name Ideas - the complete toolkit for newsletter creators featuring AI-powered name generation, domain checking, and social media verification.",
+          datePublished: "2025-01-01",
+          dateModified: currentDate.split('T')[0],
+        })}
+      />
+
+      <div className="bg-background">
       <div className="container mx-auto px-4 py-12">
         <header className="mb-12 text-center">
           <h1 className="text-4xl font-bold mb-4">About Newsletter Name Ideas</h1>
@@ -100,5 +142,6 @@ export default function AboutPage() {
         </div>
       </div>
     </div>
+    </>
   )
 }

@@ -1,10 +1,56 @@
 import { Suspense } from "react"
+import { Metadata } from "next"
 import NewsletterGenerator from "@/components/newsletter-name-generator"
 import { Loader } from "lucide-react"
+import {
+  StructuredData,
+  generateWebApplicationData,
+  generateHowToData,
+} from "@/components/seo/structured-data"
+
+export const metadata: Metadata = {
+  title: "AI Newsletter Name Generator - Free Creative Name Ideas",
+  description: "Generate unique, catchy newsletter names instantly with AI. Filter by style, save favorites, and get the perfect name for your email newsletter. Free forever.",
+  keywords: [
+    "newsletter name generator",
+    "AI newsletter name generator",
+    "creative newsletter names",
+    "email newsletter names",
+    "newsletter naming tool",
+    "substack name generator",
+    "newsletter name creator",
+    "newsletter title ideas",
+    "newsletter brand name generator",
+    "catchy newsletter names",
+    "newsletter title generator",
+    "newsletter name generator free",
+    "free newsletter name generator",
+    "catchy newsletter names list",
+    "internal newsletter names",
+    "catchy names for newsletters",
+    "clever names for newsletters",
+    "catchy newsletter titles",
+    "newsletter title"
+  ],
+  openGraph: {
+    title: "AI Newsletter Name Generator - Free Creative Name Ideas",
+    description: "Generate unique, catchy newsletter names with AI. Filter, save favorites, and find the perfect name for your newsletter.",
+    url: "https://newsletternameideas.com/newsletter-name-generator",
+    type: "website",
+  },
+  alternates: {
+    canonical: "https://newsletternameideas.com/newsletter-name-generator",
+  },
+}
 
 export default function GeneratorPage() {
   return (
-    <div className="min-h-screen bg-[#faf9ff] dark:bg-[#0e0b1a]">
+    <>
+      {/* Structured Data for SEO */}
+      <StructuredData data={generateWebApplicationData()} />
+      <StructuredData data={generateHowToData()} />
+
+      <div className="min-h-screen bg-[#faf9ff] dark:bg-[#0e0b1a]">
 
       {/* Background dot grid */}
       <div
@@ -44,5 +90,6 @@ export default function GeneratorPage() {
         </Suspense>
       </div>
     </div>
+    </>
   )
 }

@@ -4,6 +4,14 @@ import { FaMagic } from "react-icons/fa"
 import { HeroSection } from "@/components/hero-section"
 import { GlassCard, GlassCardContent } from "@/components/ui/glass-card"
 import { Button } from "@/components/ui/button"
+import {
+  StructuredData,
+  generateOrganizationData,
+  generateWebApplicationData,
+  generateWebSiteData,
+  generateFAQData,
+  generateHowToData,
+} from "@/components/seo/structured-data"
 
 const features = [
   {
@@ -46,7 +54,15 @@ const features = [
 
 export default function Home() {
   return (
-    <div className="bg-[#faf9ff] dark:bg-[#0e0b1a]">
+    <>
+      {/* Structured Data for SEO and AI indexing */}
+      <StructuredData data={generateOrganizationData()} />
+      <StructuredData data={generateWebApplicationData()} />
+      <StructuredData data={generateWebSiteData()} />
+      <StructuredData data={generateFAQData()} />
+      <StructuredData data={generateHowToData()} />
+
+      <div className="bg-[#faf9ff] dark:bg-[#0e0b1a]">
       <HeroSection />
 
       {/* ── Section divider ── */}
@@ -166,5 +182,6 @@ export default function Home() {
         </div>
       </section>
     </div>
+    </>
   )
 }
