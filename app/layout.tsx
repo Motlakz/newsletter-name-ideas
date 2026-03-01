@@ -1,5 +1,5 @@
 import { Metadata } from "next"
-import { Quicksand } from "next/font/google"
+import { Quicksand, Raleway } from "next/font/google"
 import Head from "next/head"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
@@ -7,12 +7,19 @@ import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
 import { Toaster } from "sonner"
 import { NewsletterProvider } from "@/context/NewsletterContext"
-import {
-  ClerkProvider,
-} from '@clerk/nextjs'
 import TinyAdzBanner from "@/components/common/tiny-adz-banner"
 
-const quicksand = Quicksand({ subsets: ["latin"] })
+const quicksand = Quicksand({
+  subsets: ["latin"],
+  variable: "--font-quicksand",
+  display: "swap",
+})
+
+const raleway = Raleway({
+  subsets: ["latin"],
+  variable: "--font-raleway",
+  display: "swap",
+})
 
 export const metadata: Metadata = {
   title: "Newsletter Name Ideas - Creative Newsletter Name Generator",
@@ -53,26 +60,24 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <ClerkProvider>
-      <html lang="en" suppressHydrationWarning>
-        <Head>
-          <meta name="keywords" content="newsletter name generator, newsletter name ideas, AI newsletter name generator" />
-          <meta name="viewport" content="width=device-width, initial-scale=1" />
-        </Head>
-        <body className={quicksand.className}>
-          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-            <NewsletterProvider>
-              <div className="flex flex-col min-h-screen">
-                <Header />
-                <main className="flex-1 pt-16">{children}</main>
-                <Footer />
-              </div>
-              <Toaster />
-            </NewsletterProvider>
-          </ThemeProvider>
-          <TinyAdzBanner />
-        </body>
-      </html>
-    </ClerkProvider>
+    <html lang="en" suppressHydrationWarning>
+      <Head>
+        <meta name="keywords" content="newsletter name generator, newsletter names generator, newsletter name ideas, AI newsletter name generator" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+      </Head>
+      <body className={`${raleway.variable} ${quicksand.variable}`}>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          <NewsletterProvider>
+            <div className="flex flex-col min-h-screen">
+              <Header />
+              <main className="flex-1 pt-16">{children}</main>
+              <Footer />
+            </div>
+            <Toaster />
+          </NewsletterProvider>
+        </ThemeProvider>
+        <TinyAdzBanner />
+      </body>
+    </html>
   )
 }

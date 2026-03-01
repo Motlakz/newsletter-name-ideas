@@ -35,6 +35,10 @@
     --ring: 270 70% 60%;
 
     --radius: 0.5rem;
+
+    /* Font families */
+    --font-primary: var(--font-raleway);
+    --font-secondary: var(--font-quicksand);
   }
 
   .dark {
@@ -73,16 +77,19 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-secondary;
   }
-  h1 {
-    @apply text-4xl font-bold tracking-tight;
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-primary;
   }
-  h2 {
-    @apply text-2xl font-semibold tracking-tight;
+}
+
+@layer utilities {
+  .font-primary {
+    font-family: var(--font-raleway), Montserrat, sans-serif;
   }
-  h3 {
-    @apply text-xl font-semibold tracking-tight;
+  .font-secondary {
+    font-family: var(--font-quicksand), Nunito, sans-serif;
   }
 }
 

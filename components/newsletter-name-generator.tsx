@@ -228,29 +228,29 @@ export default function NewsletterNameGenerator() {
   return (
     <div className="max-w-4xl mx-auto">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-      <TabsList className="grid grid-cols-3 w-full max-w-md h-16 mx-auto dark:bg-slate-800/50 bg-gray-100/50 p-2 rounded-xl shadow-inner">
-        <TabsTrigger 
-          value="generator" 
-          className="text-sm sm:text-base font-medium px-4 py-2.5 rounded-lg transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:text-primary data-[state=active]:shadow-sm flex items-center justify-center gap-2"
+      <TabsList className="grid grid-cols-3 w-full max-w-md h-11 mx-auto bg-slate-100/70 dark:bg-slate-800/40 p-1 rounded-xl border border-slate-200/50 dark:border-slate-700/30">
+        <TabsTrigger
+          value="generator"
+          className="text-sm rounded-lg transition-all text-slate-500 dark:text-slate-400 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-slate-900 dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-slate-200/60 dark:data-[state=active]:border-slate-700/40 font-medium flex items-center justify-center gap-2"
         >
-          <Wand2 className="h-4 w-4" />
+          <Wand2 className="h-3.5 w-3.5 opacity-70" />
           Generator
         </TabsTrigger>
-        <TabsTrigger 
-          value="results" 
-          className="text-sm sm:text-base font-medium px-4 py-2.5 rounded-lg transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:text-primary data-[state=active]:shadow-sm flex items-center justify-center gap-2"
+        <TabsTrigger
+          value="results"
+          className="text-sm rounded-lg transition-all text-slate-500 dark:text-slate-400 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-slate-900 dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-slate-200/60 dark:data-[state=active]:border-slate-700/40 font-medium flex items-center justify-center gap-2"
         >
-          <ListFilter className="h-4 w-4" />
+          <ListFilter className="h-3.5 w-3.5 opacity-70" />
           Results
         </TabsTrigger>
-        <TabsTrigger 
-          value="favorites" 
-          className="text-sm sm:text-base font-medium px-4 py-2.5 rounded-lg transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:text-primary data-[state=active]:shadow-sm flex items-center justify-center gap-2"
+        <TabsTrigger
+          value="favorites"
+          className="text-sm rounded-lg transition-all text-slate-500 dark:text-slate-400 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-slate-900 dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-slate-200/60 dark:data-[state=active]:border-slate-700/40 font-medium flex items-center justify-center gap-2"
         >
-          <Heart className="h-4 w-4" />
+          <Heart className="h-3.5 w-3.5 opacity-70" />
           <span>Favorites</span>
           {favorites.length > 0 && (
-            <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-medium bg-primary/10 text-primary rounded-full">
+            <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-medium bg-violet-100/70 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 rounded-full">
               {favorites.length}
             </span>
           )}
@@ -259,14 +259,18 @@ export default function NewsletterNameGenerator() {
 
       <TabsContent value="generator">
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-          <GlassCard className="border-primary/20">
+          <GlassCard className="border-slate-200/50 dark:border-slate-700/30 bg-white/70 dark:bg-slate-900/40">
             <GlassCardHeader>
               <div className="flex justify-between items-start">
                 <div>
-                  <h2 className="text-2xl font-semibold">Create Your Newsletter Name</h2>
-                  <p className="text-muted-foreground">
-                    {activeTemplate ? 
-                      `Using ${TEMPLATE_PRESETS.find(t => t.id === activeTemplate)?.label} template` : 
+                  <h2
+                    className="text-lg font-semibold text-slate-900 dark:text-slate-100"
+                  >
+                    Create Your Newsletter Name
+                  </h2>
+                  <p className="text-sm text-slate-400 dark:text-slate-500 mt-0.5">
+                    {activeTemplate ?
+                      `Using ${TEMPLATE_PRESETS.find(t => t.id === activeTemplate)?.label} template` :
                       "Choose a template or start fresh"}
                   </p>
                 </div>
@@ -275,7 +279,7 @@ export default function NewsletterNameGenerator() {
                     variant="ghost"
                     size="sm"
                     onClick={clearTemplate}
-                    className="text-muted-foreground hover:text-primary"
+                    className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
                   >
                     Clear Template
                   </Button>
@@ -284,20 +288,20 @@ export default function NewsletterNameGenerator() {
             </GlassCardHeader>
             <GlassCardContent>
               <div className="mb-8">
-                <Label className="block mb-4">Naming Templates</Label>
+                <Label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-4">Naming Templates</Label>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {TEMPLATE_PRESETS.map((template) => (
                     <Button
                       key={template.id}
                       variant={activeTemplate === template.id ? "default" : "outline"}
                       className={`h-auto py-3 flex flex-col items-center gap-2 transition-all ${
-                        activeTemplate === template.id 
-                          ? "border-primary bg-primary/10 text-primary hover:bg-primary/20" 
-                          : "border-input/50 hover:border-primary/30 hover:bg-accent/50"
+                        activeTemplate === template.id
+                          ? "border-violet-300 bg-violet-50/80 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300 hover:bg-violet-100 dark:hover:bg-violet-900/30"
+                          : "border-slate-200/60 dark:border-slate-700/40 hover:border-violet-200 dark:hover:border-violet-800/50 hover:bg-slate-50/50 dark:hover:bg-slate-800/30"
                       }`}
                       onClick={() => applyTemplate(template.id)}
                     >
-                      <span className="text-primary">{template.icon}</span>
+                      <span className="text-violet-600 dark:text-violet-400">{template.icon}</span>
                       <span className="text-sm">{template.label}</span>
                     </Button>
                   ))}
@@ -306,33 +310,33 @@ export default function NewsletterNameGenerator() {
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="topic">Newsletter Topic *</Label>
+                  <Label htmlFor="topic" className="text-sm font-medium text-slate-700 dark:text-slate-300">Newsletter Topic *</Label>
                   <Input
                     id="topic"
                     placeholder="e.g., Technology, Finance, Health, Marketing"
                     value={topic}
                     onChange={(e) => setTopic(e.target.value)}
                     required
-                    className="border-input/50 focus:border-primary"
+                    className="border-slate-200/70 dark:border-slate-700/50 focus:border-violet-400 dark:focus:border-violet-500 bg-white dark:bg-slate-900"
                   />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="audience">Target Audience</Label>
+                    <Label htmlFor="audience" className="text-sm font-medium text-slate-700 dark:text-slate-300">Target Audience</Label>
                     <Input
                       id="audience"
                       placeholder="e.g., Professionals, Students, Parents"
                       value={audience}
                       onChange={(e) => setAudience(e.target.value)}
-                      className="border-input/50 focus:border-primary"
+                      className="border-slate-200/70 dark:border-slate-700/50 focus:border-violet-400 dark:focus:border-violet-500 bg-white dark:bg-slate-900"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="tone">Preferred Tone</Label>
+                    <Label htmlFor="tone" className="text-sm font-medium text-slate-700 dark:text-slate-300">Preferred Tone</Label>
                     <Select value={tone} onValueChange={setTone}>
-                      <SelectTrigger className="border-input/50 focus:border-primary">
+                      <SelectTrigger className="border-slate-200/70 dark:border-slate-700/50 focus:border-violet-400 dark:focus:border-violet-500 bg-white dark:bg-slate-900">
                         <SelectValue placeholder="Select tone" />
                       </SelectTrigger>
                       <SelectContent>
@@ -348,18 +352,18 @@ export default function NewsletterNameGenerator() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="keywords">Keywords or Phrases to Include</Label>
+                  <Label htmlFor="keywords" className="text-sm font-medium text-slate-700 dark:text-slate-300">Keywords or Phrases to Include</Label>
                   <Input
                     id="keywords"
                     placeholder="e.g., tech, insights, weekly, insider"
                     value={keywords}
                     onChange={(e) => setKeywords(e.target.value)}
-                    className="border-input/50 focus:border-primary"
+                    className="border-slate-200/70 dark:border-slate-700/50 focus:border-violet-400 dark:focus:border-violet-500 bg-white dark:bg-slate-900"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Name Length</Label>
+                  <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">Name Length</Label>
                   <div className="pt-2 px-2">
                     <Slider
                       defaultValue={nameLength}
@@ -369,7 +373,7 @@ export default function NewsletterNameGenerator() {
                       onValueChange={setNameLength}
                       className="py-4"
                     />
-                    <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                    <div className="flex justify-between text-xs text-slate-400 dark:text-slate-500 mt-1">
                       <span>Short</span>
                       <span>Medium</span>
                       <span>Long</span>
@@ -379,40 +383,40 @@ export default function NewsletterNameGenerator() {
 
                 <div className="flex flex-col sm:flex-row gap-4">
                   <div className="flex items-center space-x-2">
-                    <Switch 
-                      id="alliteration" 
-                      checked={useAlliteration} 
+                    <Switch
+                      id="alliteration"
+                      checked={useAlliteration}
                       onCheckedChange={(checked) => {
                         setUseAlliteration(checked)
                         if (!checked) setActiveTemplate("")
                       }}
                       disabled={activeTemplate === 'alliteration'}
                     />
-                    <Label htmlFor="alliteration">Use Alliteration</Label>
+                    <Label htmlFor="alliteration" className="text-slate-700 dark:text-slate-300">Use Alliteration</Label>
                   </div>
 
                   <div className="flex items-center space-x-2">
-                    <Switch 
-                      id="emojis" 
-                      checked={useEmojis} 
+                    <Switch
+                      id="emojis"
+                      checked={useEmojis}
                       onCheckedChange={(checked) => {
                         setUseEmojis(checked)
                         if (!checked) setActiveTemplate("")
                       }}
                       disabled={activeTemplate === 'emoji'}
                     />
-                    <Label htmlFor="emojis">Include Emojis</Label>
+                    <Label htmlFor="emojis" className="text-slate-700 dark:text-slate-300">Include Emojis</Label>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="additionalInfo">Additional Information</Label>
+                  <Label htmlFor="additionalInfo" className="text-sm font-medium text-slate-700 dark:text-slate-300">Additional Information</Label>
                   <Textarea
                     id="additionalInfo"
                     placeholder="Any other details that might help generate better names..."
                     value={additionalInfo}
                     onChange={(e) => setAdditionalInfo(e.target.value)}
-                    className="border-input/50 focus:border-primary min-h-[100px]"
+                    className="border-slate-200/70 dark:border-slate-700/50 focus:border-violet-400 dark:focus:border-violet-500 bg-white dark:bg-slate-900 min-h-[100px]"
                   />
                 </div>
 
@@ -420,7 +424,7 @@ export default function NewsletterNameGenerator() {
                   <Button
                     type="submit"
                     disabled={isGenerating || !topic}
-                    className="bg-gradient-to-r from-primary to-purple-400 hover:from-primary/90 hover:to-purple-400/90 text-white shadow-md hover:shadow-lg transition-all"
+                    className="bg-slate-900 hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white text-white border-0 shadow-sm"
                   >
                     {isGenerating ? (
                       <>
@@ -429,7 +433,7 @@ export default function NewsletterNameGenerator() {
                       </>
                     ) : (
                       <>
-                        <Sparkles className="mr-2 h-5 w-5" />
+                        <Sparkles className="mr-2 h-4 w-4" />
                         Generate Newsletter Names
                       </>
                     )}
@@ -445,10 +449,10 @@ export default function NewsletterNameGenerator() {
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
             <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div className="flex items-center gap-2">
-                <Filter className="h-5 w-5 text-primary" />
-                <span className="font-medium">Filter by:</span>
+                <Filter className="h-5 w-5 text-violet-500" />
+                <span className="font-medium text-slate-700 dark:text-slate-300">Filter by:</span>
                 <Select value={activeFilter} onValueChange={setActiveFilter}>
-                  <SelectTrigger className="w-[180px] border-input/50">
+                  <SelectTrigger className="w-[180px] border-slate-200/60 dark:border-slate-700/40">
                     <SelectValue placeholder="Category" />
                   </SelectTrigger>
                   <SelectContent>
@@ -463,9 +467,9 @@ export default function NewsletterNameGenerator() {
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="font-medium">Sort by:</span>
+                <span className="font-medium text-slate-700 dark:text-slate-300">Sort by:</span>
                 <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="w-[180px] border-input/50">
+                  <SelectTrigger className="w-[180px] border-slate-200/60 dark:border-slate-700/40">
                     <SelectValue placeholder="Sort by" />
                   </SelectTrigger>
                   <SelectContent>
@@ -481,17 +485,17 @@ export default function NewsletterNameGenerator() {
 
             {names.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-lg mb-4">No newsletter names generated yet.</p>
+                <p className="text-lg text-slate-600 dark:text-slate-400 mb-4">No newsletter names generated yet.</p>
                 <Button
                   onClick={() => setActiveTab("generator")}
                   variant="outline"
-                  className="border-primary/20 text-primary hover:bg-primary/10"
+                  className="border-slate-200/60 dark:border-slate-700/40 text-slate-700 dark:text-slate-300 hover:bg-slate-50/50 dark:hover:bg-slate-800/30"
                 >
                   Go to Generator
                 </Button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <AnimatePresence>
                   {getFilteredNames().map((name, index) => (
                     <motion.div
@@ -503,34 +507,39 @@ export default function NewsletterNameGenerator() {
                     >
                       <GlassCard
                         className={cn(
-                          "transition-all duration-300 hover:shadow-md",
-                          name.isFavorite ? "border-amber-300/50 dark:border-amber-300/30" : "border-primary/20",
+                          "transition-all duration-300 hover:shadow-sm",
+                          name.isFavorite
+                            ? "border-amber-200/60 dark:border-amber-800/30"
+                            : "border-slate-200/50 dark:border-slate-700/30",
+                          "bg-white/70 dark:bg-slate-900/40",
                         )}
                       >
-                        <GlassCardContent>
+                        <GlassCardContent className="p-4">
                           <div className="flex justify-between items-start mb-2">
-                            <h3 className="text-xl font-bold">{name.name}</h3>
+                            <h3
+                              className="text-base font-semibold text-slate-800 dark:text-slate-200"
+                            >
+                              {name.name}
+                            </h3>
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => toggleFavorite(name)}
-                              className={cn("p-2 h-auto", name.isFavorite ? "text-amber-500" : "text-muted-foreground")}
+                              className={cn("p-2 h-auto", name.isFavorite ? "text-amber-500" : "text-slate-300 dark:text-slate-600")}
                             >
-                              {name.isFavorite ? (
-                                <Star className="h-5 w-5 fill-amber-500" />
-                              ) : (
-                                <Star className="h-5 w-5" />
-                              )}
+                              <Star className={cn("h-4 w-4", name.isFavorite && "fill-amber-500")} />
                             </Button>
                           </div>
-                          <Badge className="mb-3 bg-primary/10 text-primary border-primary/20">{name.category}</Badge>
-                          <p className="text-muted-foreground mb-4">{name.description}</p>
+                          <Badge className="mb-2 bg-violet-100/70 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 border-violet-200/60 dark:border-violet-800/30">
+                            {name.category}
+                          </Badge>
+                          <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-4">{name.description}</p>
 
                           <div className="flex flex-wrap gap-2 mt-4">
                             <Button
                               variant="outline"
                               size="sm"
-                              className="text-xs border-primary/20 text-primary"
+                              className="text-xs border-slate-200/60 dark:border-slate-700/40 text-slate-600 dark:text-slate-400 hover:bg-slate-50/50 dark:hover:bg-slate-800/30"
                               onClick={() => checkDomains(name.name.replace(/\s+/g, "").toLowerCase())}
                               disabled={isCheckingDomain}
                             >
@@ -546,8 +555,8 @@ export default function NewsletterNameGenerator() {
                               <Badge
                                 className={
                                   domainResults[name.name.replace(/\s+/g, "").toLowerCase()]
-                                    ? "bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400"
-                                    : "bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400"
+                                    ? "bg-green-100/70 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200/60 dark:hover:bg-green-900/40"
+                                    : "bg-red-100/70 dark:bg-red-900/30 text-red-700 dark:text-red-400 hover:bg-red-200/60 dark:hover:bg-red-900/40"
                                 }
                               >
                                 {domainResults[name.name.replace(/\s+/g, "").toLowerCase()] ? (
@@ -571,7 +580,7 @@ export default function NewsletterNameGenerator() {
               <div className="mt-8 text-center">
                 <Button
                   onClick={handleSubmit}
-                  className="bg-gradient-to-r from-primary to-purple-400 hover:from-primary/90 hover:to-purple-400/90 text-white shadow-md hover:shadow-lg transition-all"
+                  className="bg-slate-900 hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white text-white border-0 shadow-sm"
                   disabled={isGenerating}
                 >
                   {isGenerating ? (
@@ -595,10 +604,10 @@ export default function NewsletterNameGenerator() {
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
             <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div className="flex items-center gap-2">
-                <Filter className="h-5 w-5 text-primary" />
-                <span className="font-medium">Filter by:</span>
+                <Filter className="h-5 w-5 text-violet-500" />
+                <span className="font-medium text-slate-700 dark:text-slate-300">Filter by:</span>
                 <Select value={favoritesFilter} onValueChange={setFavoritesFilter}>
-                  <SelectTrigger className="w-[180px] border-input/50">
+                  <SelectTrigger className="w-[180px] border-slate-200/60 dark:border-slate-700/40">
                     <SelectValue placeholder="Category" />
                   </SelectTrigger>
                   <SelectContent>
@@ -613,9 +622,9 @@ export default function NewsletterNameGenerator() {
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="font-medium">Sort by:</span>
+                <span className="font-medium text-slate-700 dark:text-slate-300">Sort by:</span>
                 <Select value={favoritesSortBy} onValueChange={setFavoritesSortBy}>
-                  <SelectTrigger className="w-[180px] border-input/50">
+                  <SelectTrigger className="w-[180px] border-slate-200/60 dark:border-slate-700/40">
                     <SelectValue placeholder="Sort by" />
                   </SelectTrigger>
                   <SelectContent>
@@ -631,19 +640,19 @@ export default function NewsletterNameGenerator() {
             {favorites.length === 0 ? (
               <div className="text-center py-12">
                 <div className="flex flex-col items-center gap-4">
-                  <Heart className="h-16 w-16 text-muted-foreground/30" />
-                  <p className="text-lg mb-4">No favorites saved yet.</p>
+                  <Heart className="h-16 w-16 text-slate-300 dark:text-slate-600" />
+                  <p className="text-lg text-slate-600 dark:text-slate-400 mb-4">No favorites saved yet.</p>
                   <Button
                     onClick={() => setActiveTab("generator")}
                     variant="outline"
-                    className="border-primary/20 text-primary hover:bg-primary/10"
+                    className="border-slate-200/60 dark:border-slate-700/40 text-slate-700 dark:text-slate-300 hover:bg-slate-50/50 dark:hover:bg-slate-800/30"
                   >
                     Generate Some Names
                   </Button>
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <AnimatePresence>
                   {getFilteredFavorites().map((favorite, index) => (
                     <motion.div
@@ -653,29 +662,33 @@ export default function NewsletterNameGenerator() {
                       exit={{ opacity: 0, scale: 0.95 }}
                       transition={{ duration: 0.3, delay: index * 0.05 }}
                     >
-                      <GlassCard className="border-pink-300/50 dark:border-pink-500/30 hover:shadow-md transition-all duration-300">
-                        <GlassCardContent>
+                      <GlassCard className="border-amber-200/60 dark:border-amber-800/30 hover:shadow-sm transition-all duration-300 bg-white/70 dark:bg-slate-900/40">
+                        <GlassCardContent className="p-4">
                           <div className="flex justify-between items-start mb-2">
-                            <h3 className="text-xl font-bold">{favorite.name}</h3>
+                            <h3
+                              className="text-base font-semibold text-slate-800 dark:text-slate-200"
+                            >
+                              {favorite.name}
+                            </h3>
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => toggleFavorite(favorite)}
-                              className="p-2 h-auto text-pink-500"
+                              className="p-2 h-auto text-amber-500"
                             >
-                              <Star className="h-5 w-5 fill-pink-500" />
+                              <Star className="h-4 w-4 fill-amber-500" />
                             </Button>
                           </div>
-                          <Badge className="mb-3 bg-primary/10 text-primary border-primary/20">
+                          <Badge className="mb-2 bg-violet-100/70 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 border-violet-200/60 dark:border-violet-800/30">
                             {favorite.category}
                           </Badge>
-                          <p className="text-muted-foreground mb-4">{favorite.description}</p>
+                          <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-4">{favorite.description}</p>
 
                           <div className="flex flex-wrap gap-2 mt-4">
                             <Button
                               variant="outline"
                               size="sm"
-                              className="text-xs border-primary/20 text-primary"
+                              className="text-xs border-slate-200/60 dark:border-slate-700/40 text-slate-600 dark:text-slate-400 hover:bg-slate-50/50 dark:hover:bg-slate-800/30"
                               onClick={() => checkDomains(favorite.name.replace(/\s+/g, "").toLowerCase())}
                               disabled={isCheckingDomain}
                             >
@@ -691,8 +704,8 @@ export default function NewsletterNameGenerator() {
                               <Badge
                                 className={
                                   domainResults[favorite.name.replace(/\s+/g, "").toLowerCase()]
-                                    ? "bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400"
-                                    : "bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400"
+                                    ? "bg-green-100/70 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200/60 dark:hover:bg-green-900/40"
+                                    : "bg-red-100/70 dark:bg-red-900/30 text-red-700 dark:text-red-400 hover:bg-red-200/60 dark:hover:bg-red-900/40"
                                 }
                               >
                                 {domainResults[favorite.name.replace(/\s+/g, "").toLowerCase()] ? (
@@ -716,7 +729,7 @@ export default function NewsletterNameGenerator() {
               <div className="mt-8 text-center">
                 <Button
                   onClick={() => setActiveTab("generator")}
-                  className="bg-gradient-to-r from-primary to-purple-400 hover:from-primary/90 hover:to-purple-400/90 text-white shadow-md hover:shadow-lg transition-all"
+                  className="bg-slate-900 hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white text-white border-0 shadow-sm"
                 >
                   <Sparkles className="mr-2 h-4 w-4" />
                   Generate More Names

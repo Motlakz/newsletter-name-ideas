@@ -41,22 +41,6 @@ export function Footer() {
             <ul className="space-y-2 text-sm">
               <li>
                 <Link
-                  href="/blog?category=learning"
-                  className="text-muted-foreground hover:text-primary transition-colors"
-                >
-                  Learning Center
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/blog?category=best-practices"
-                  className="text-muted-foreground hover:text-primary transition-colors"
-                >
-                  Best Practices
-                </Link>
-              </li>
-              <li>
-                <Link
                   href="/templates"
                   className="text-muted-foreground hover:text-primary transition-colors"
                 >

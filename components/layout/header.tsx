@@ -7,14 +7,12 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/mode-toggle"
 import Logo from "../common/logo"
-import { Menu, X, LayoutDashboard, LogIn } from "lucide-react"
-import { useAuth, SignInButton } from "@clerk/nextjs"
+import { Menu, X } from "lucide-react"
 
 export function Header() {
   const pathname = usePathname()
   const [scrolled, setScrolled] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const { isSignedIn } = useAuth()
 
   useEffect(() => {
     const handleScroll = () => {
@@ -29,8 +27,6 @@ export function Header() {
     { name: "Home", path: "/" },
     { name: "Generator", path: "/newsletter-name-generator" },
     { name: "Tools", path: "/tools" },
-    { name: "Plans", path: "/#plans" },
-    { name: "Blog", path: "/blog" },
   ]
 
   return (
@@ -77,37 +73,6 @@ export function Header() {
         {/* Desktop Actions */}
         <div className="hidden md:flex items-center gap-4">
           <ModeToggle />
-          
-          {/* Authentication State Management */}
-          {isSignedIn ? (
-            <>
-              {/* User Dashboard Button */}
-              <Button
-                asChild
-                variant="outline"
-                size="sm"
-                className="gap-1"
-              >
-                <Link href="/dashboard">
-                  <LayoutDashboard className="w-4 h-4 mr-1" />
-                  Dashboard
-                </Link>
-              </Button>
-            </>
-          ) : (
-            /* Sign In Button */
-            <SignInButton mode="modal">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="gap-1"
-              >
-                <LogIn className="w-4 h-4 mr-1" />
-                Sign In
-              </Button>
-            </SignInButton>
-          )}
-          
           <Button
             asChild
             size="sm"
@@ -148,33 +113,7 @@ export function Header() {
                   {item.name}
                 </Link>
               ))}
-              
-              {/* Authentication in Mobile Menu */}
-              {isSignedIn ? (
-                <Link
-                  href="/dashboard"
-                  className="px-4 py-2 text-sm font-medium transition-colors hover:bg-muted rounded-md flex items-center"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <LayoutDashboard className="w-4 h-4 mr-2" />
-                  Dashboard
-                </Link>
-              ) : (
-                /* Sign In Button for mobile */
-                <div className="px-4 py-2">
-                  <SignInButton mode="modal">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="gap-1 w-full justify-center"
-                    >
-                      <LogIn className="w-4 h-4 mr-1" />
-                      Sign In
-                    </Button>
-                  </SignInButton>
-                </div>
-              )}
-              
+
               <div className="border-t pt-4 px-4">
                 <Button
                   asChild

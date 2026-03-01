@@ -19,6 +19,10 @@ const config = {
       },
     },
     extend: {
+      fontFamily: {
+        primary: ["var(--font-raleway)", "Montserrat", "sans-serif"],
+        secondary: ["var(--font-quicksand)", "Nunito", "sans-serif"],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

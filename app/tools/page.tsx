@@ -6,589 +6,524 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { GlassCard, GlassCardContent, GlassCardHeader } from "@/components/ui/glass-card"
-import { Globe, Search, CheckCircle, XCircle, Loader, AlertTriangle, Lock } from "lucide-react"
-import { checkDomainAvailability, checkSocialMediaHandles, checkTLDAvailability, generateNames } from '@/lib/actions'
-import { useAuth } from "@clerk/nextjs"
-import { useRouter } from "next/navigation"
+import { motion } from "framer-motion"
+import {
+  Globe,
+  Search,
+  CheckCircle,
+  XCircle,
+  Loader,
+  AlertTriangle,
+  Twitter,
+  Instagram,
+  Linkedin,
+  Youtube,
+  Star,
+} from "lucide-react"
+import {
+  checkDomainAvailability,
+  checkSocialMediaHandles,
+  checkTLDAvailability,
+  generateNames,
+} from '@/lib/actions'
 import { GeneratedName } from '@/types/templates'
-import { usePremiumProtection } from '@/hooks/use-premium-protection'
 
 type DomainResult = {
-  domain: string;
-  available: boolean;
-  error?: {
-    message: string;
-    code?: string;
-  } | null;
-  isPlatform: boolean;
+  domain: string
+  available: boolean
+  error?: { message: string; code?: string } | null
+  isPlatform: boolean
+}
+
+const PLATFORM_ICONS: Record<string, React.ReactNode> = {
+  twitter:   <Twitter   className="h-3.5 w-3.5" />,
+  instagram: <Instagram className="h-3.5 w-3.5" />,
+  linkedin:  <Linkedin  className="h-3.5 w-3.5" />,
+  youtube:   <Youtube   className="h-3.5 w-3.5" />,
 }
 
 export default function ToolsPage() {
-  const { userId } = useAuth()
-  const router = useRouter()
-  const [domainName, setDomainName] = useState('')
-  const [domainResults, setDomainResults] = useState<DomainResult[]>([])
-  const [seoName, setSeoName] = useState('')
+  const [domainName,     setDomainName]     = useState('')
+  const [domainResults,  setDomainResults]  = useState<DomainResult[]>([])
+  const [seoName,        setSeoName]        = useState('')
   const [generatedNames, setGeneratedNames] = useState<GeneratedName[]>([])
-  const [isPending, startTransition] = useTransition()
-  const [handleName, setHandleName] = useState('')
-  const [socialResults, setSocialResults] = useState<Array<{
-    platform: string
-    handle: string
-    available: boolean
+  const [handleName,     setHandleName]     = useState('')
+  const [socialResults,  setSocialResults]  = useState<Array<{
+    platform: string; handle: string; available: boolean
   }>>([])
+  const [isPending, startTransition] = useTransition()
 
-  const { isPremium, overlayVisible } = usePremiumProtection(userId ?? "")
-
-  const PremiumOverlay = () => (
-    <div 
-      className="absolute inset-0 z-50 backdrop-blur-md bg-black/70 dark:bg-black/40 cursor-pointer rounded-lg flex items-center border-2 justify-center"
-      onClick={() => router.push('/#plans')}
-      onContextMenu={(e) => {
-        e.preventDefault()
-        router.push('/#plans')
-      }}
-      style={{
-        pointerEvents: 'auto',
-        userSelect: 'none',
-        WebkitUserSelect: 'none',
-        MozUserSelect: 'none'
-      }}
-    >
-      <div className="text-center p-6 max-w-md mx-auto">
-        <Lock className="h-12 w-12 text-purple-400 animate-pulse mx-auto mb-4" />
-        <h3 className="text-2xl font-semibold text-purple-400 mb-2">
-          Premium Feature
-        </h3>
-        <p className="text-white/90 mb-4">
-          Upgrade to unlock social media handle checking
-        </p>
-        <Button 
-          variant="secondary" 
-          className="px-6 py-2 text-white hover:bg-purple-500 transition-colors"
-          onClick={(e) => {
-            e.stopPropagation()
-            router.push('/#plans')
-          }}
-        >
-          Upgrade Now
-        </Button>
-      </div>
-    </div>
-  )
-
-  const handleSocialCheck = async () => {
-    startTransition(async () => {
-      try {
-        // Dual validation: client-side and server-side
-        if (!isPremium || !(await validatePremiumStatus())) {
-          router.push('/#plans')
-          return
-        }
-
-        // Sanitize input and validate format
-        const cleanHandle = handleName
-          .replace(/[^a-zA-Z0-9_]/g, '')
-          .substring(0, 20)
-          
-        if (cleanHandle.length < 3) {
-          throw new Error('Handle must be at least 3 characters')
-        }
-
-        const results = await checkSocialMediaHandles(cleanHandle)
-        setSocialResults(results)
-      } catch (error) {
-        console.error('Social check failed:', error)
-      }
-    })
-  }
-
-  const validatePremiumStatus = async () => {
-    try {
-      const res = await fetch('/api/validate-premium', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId }),
-        credentials: 'same-origin'
-      })
-      return (await res.json()).valid
-    } catch (error) {
-      return false
-    }
-  }
-
-  // Domain Checker Functions
+  // ── Domain checker ─────────────────────────────────────────────────────────
   const handleDomainCheck = async () => {
     startTransition(async () => {
       try {
-        // Input validation
-        if (!domainName.trim()) {
-          throw new Error("Please enter a domain name");
-        }
-  
-        const baseName = domainName.trim().toLowerCase().replace(/\..*$/, ''); // Remove any existing TLD
-        
-        // Validate domain name format
-        const domainRegex = /^[a-z0-9-]+$/;
-        if (!domainRegex.test(baseName)) {
-          throw new Error("Domain name can only contain letters, numbers, and hyphens");
-        }
-  
-        if (baseName.length < 1 || baseName.length > 63) {
-          throw new Error("Domain name must be between 1 and 63 characters");
-        }
-  
-        // Define all TLDs to check, including newsletter platforms
-        const tldsToCheck = [
-          ".com",
-          ".io",
-          ".co",
-          ".net",
-          ".org",
-          ".dev",
-          ".app",
-          ".substack.com",
-        ].filter((tld, index, self) => self.indexOf(tld) === index); // Remove duplicates
-  
-        // Check all TLDs with proper error handling
+        if (!domainName.trim()) return
+        const baseName = domainName.trim().toLowerCase().replace(/\..*$/, '')
+        if (!/^[a-z0-9-]+$/.test(baseName) || baseName.length < 1 || baseName.length > 63) return
+
+        const tldsToCheck = ['.com', '.io', '.co', '.net', '.org', '.dev', '.app', '.substack.com']
+
         const results = await Promise.allSettled(
           tldsToCheck.map(async (tld): Promise<DomainResult> => {
             try {
-              // Special handling for newsletter platforms
-              if (tld === '.substack.com' || tld === '.beehiiv.com') {
-                const platformDomain = `${baseName}${tld}`;
-                const url = tld === '.substack.com' 
-                  ? `https://substack.com/${baseName}`
-                  : `https://${baseName}.beehiiv.com`;
-  
+              if (tld === '.substack.com') {
                 try {
-                  const response = await fetch(url, {
-                    method: 'HEAD', // Use HEAD request to minimize data transfer
-                    cache: 'no-store', // Prevent caching
-                    headers: {
-                      'User-Agent': 'Mozilla/5.0', // Some platforms might block requests without proper UA
-                    },
-                  });
-  
-                  // For these platforms, a 404 typically means the subdomain is available
-                  return {
-                    domain: platformDomain,
-                    available: response.status === 404,
-                    error: null,
-                    isPlatform: true
-                  };
-                } catch (error) {
-                  // Network errors or CORS issues might indicate we can't check reliably
-                  return {
-                    domain: platformDomain,
-                    available: false,
-                    error: {
-                      message: `Unable to verify ${tld} availability`,
-                      code: 'PLATFORM_CHECK_FAILED'
-                    },
-                    isPlatform: true
-                  };
+                  const res = await fetch(`https://substack.com/${baseName}`, { method: 'HEAD', cache: 'no-store' })
+                  return { domain: `${baseName}${tld}`, available: res.status === 404, error: null, isPlatform: true }
+                } catch {
+                  return { domain: `${baseName}${tld}`, available: false, error: { message: 'Unable to verify availability', code: 'PLATFORM_CHECK_FAILED' }, isPlatform: true }
                 }
               } else if (tld === '.com') {
-                // Use original server action for .com
-                const result = await checkDomainAvailability(baseName);
-                return {
-                  domain: `${baseName}.com`,
-                  available: result.available,
-                  error: null,
-                  isPlatform: false
-                };
+                const result = await checkDomainAvailability(baseName)
+                return { domain: `${baseName}.com`, available: result.available, error: null, isPlatform: false }
               } else {
-                // Use TLD server action for other TLDs
-                const result = await checkTLDAvailability(baseName, tld);
-                return {
-                  domain: `${baseName}${tld}`,
-                  available: result.available,
-                  error: null,
-                  isPlatform: false
-                };
+                const result = await checkTLDAvailability(baseName, tld)
+                return { domain: `${baseName}${tld}`, available: result.available, error: null, isPlatform: false }
               }
-            } catch (error) {
-              // Type guard for error handling
-              const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-              
-              return {
-                domain: `${baseName}${tld}`,
-                available: false,
-                error: {
-                  message: errorMessage,
-                  code: error instanceof Error && 'code' in error ? (error as any).code : 'CHECK_FAILED'
-                },
-                isPlatform: tld === '.substack.com' || tld === '.beehiiv.com'
-              };
+            } catch (err) {
+              return { domain: `${baseName}${tld}`, available: false, error: { message: err instanceof Error ? err.message : 'Unknown error', code: 'CHECK_FAILED' }, isPlatform: tld === '.substack.com' }
             }
           })
-        );
-  
-        // Process results and handle errors
-        const processedResults: DomainResult[] = results.map((result, index) => {
-          if (result.status === 'fulfilled') {
-            return result.value;
-          } else {
-            return {
-              domain: `${baseName}${tldsToCheck[index]}`,
-              available: false,
-              error: {
-                message: 'Failed to check domain availability',
-                code: 'CHECK_FAILED'
-              },
-              isPlatform: tldsToCheck[index] === '.substack.com' || tldsToCheck[index] === '.beehiiv.com'
-            };
+        )
+
+        const processed: DomainResult[] = results.map((r, i) =>
+          r.status === 'fulfilled' ? r.value : {
+            domain: `${baseName}${tldsToCheck[i]}`, available: false,
+            error: { message: 'Failed to check domain availability', code: 'CHECK_FAILED' },
+            isPlatform: tldsToCheck[i] === '.substack.com',
           }
-        });
-  
-        // Sort results with .com first, then platforms, then others
-        const sortedResults = processedResults.sort((a, b) => {
-          // Priority 1: .com comes first
-          if (a.domain.endsWith('.com') && !a.isPlatform) return -1;
-          if (b.domain.endsWith('.com') && !b.isPlatform) return 1;
+        )
 
-          // Priority 2: Platform domains come next
-          if (a.isPlatform && !b.isPlatform) return -1;
-          if (!a.isPlatform && b.isPlatform) return 1;
-
-          // Priority 3: Common TLDs (.io, .co, .net, .org) come next
-          const commonTlds = ['.io', '.co', '.net', '.org'];
-          const aIsCommon = commonTlds.some(tld => a.domain.endsWith(tld));
-          const bIsCommon = commonTlds.some(tld => b.domain.endsWith(tld));
-          if (aIsCommon && !bIsCommon) return -1;
-          if (!aIsCommon && bIsCommon) return 1;
-
-          // Priority 4: Errors go to the bottom within their groups
-          if (a.error && !b.error) return 1;
-          if (!a.error && b.error) return -1;
-
-          // Priority 5: Available domains come before unavailable ones
-          if (a.available && !b.available) return -1;
-          if (!a.available && b.available) return 1;
-
-          return 0;
-        });
-  
-        setDomainResults(sortedResults);
-      } catch (error) {
-        console.error('Domain check failed:', error);
-        // Show user-friendly error message
-        const errorMessage = error instanceof Error ? error.message : 'Failed to check domain availability';
-        setDomainResults([{
-          domain: domainName,
-          available: false,
-          error: {
-            message: errorMessage,
-            code: 'CHECK_FAILED'
-          },
-          isPlatform: false
-        }]);
-      }
-    });
-  };
-
-  // SEO Analysis Functions
-  const handleSeoAnalysis = async () => {
-    startTransition(async () => {
-      try {
-        const names = await generateNames({
-          topic: seoName,
-          nameLength: 3,
-          useAlliteration: true
-        })
-        setGeneratedNames(names)
-      } catch (error) {
-        console.error('SEO analysis failed:', error)
+        setDomainResults(processed.sort((a, b) => {
+          if (a.domain.endsWith('.com') && !a.isPlatform) return -1
+          if (b.domain.endsWith('.com') && !b.isPlatform) return 1
+          if (a.isPlatform && !b.isPlatform) return -1
+          if (!a.isPlatform && b.isPlatform) return 1
+          const common = ['.io', '.co', '.net', '.org']
+          const aC = common.some(t => a.domain.endsWith(t))
+          const bC = common.some(t => b.domain.endsWith(t))
+          if (aC && !bC) return -1
+          if (!aC && bC) return 1
+          if (a.error && !b.error) return 1
+          if (!a.error && b.error) return -1
+          if (a.available && !b.available) return -1
+          if (!a.available && b.available) return 1
+          return 0
+        }))
+      } catch (err) {
+        console.error('Domain check failed:', err)
       }
     })
   }
 
-  const toggleFavorite = (id: string) => {
-    setGeneratedNames(names =>
-      names.map(name =>
-        name.id === id ? { ...name, isFavorite: !name.isFavorite } : name
-      )
-    )
+  // ── SEO analysis ───────────────────────────────────────────────────────────
+  const handleSeoAnalysis = async () => {
+    startTransition(async () => {
+      try {
+        const names = await generateNames({ topic: seoName, nameLength: 3, useAlliteration: true })
+        setGeneratedNames(names)
+      } catch (err) {
+        console.error('SEO analysis failed:', err)
+      }
+    })
   }
 
-  return (
-    <div className="bg-background">
-      <div className="container mx-auto px-4 py-12">
-        <header className="mb-12 text-center">
-          <h1 className="text-4xl font-bold mb-4">Newsletter Tools</h1>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
-            Useful tools to help you launch and grow your newsletter
-          </p>
-        </header>
+  const toggleFavorite = (id: string) =>
+    setGeneratedNames(ns => ns.map(n => n.id === id ? { ...n, isFavorite: !n.isFavorite } : n))
 
-        <div className="max-w-4xl mx-auto">
+  // ── Social handles ─────────────────────────────────────────────────────────
+  const handleSocialCheck = async () => {
+    startTransition(async () => {
+      try {
+        const clean = handleName.replace(/[^a-zA-Z0-9_]/g, '').substring(0, 20)
+        if (clean.length < 3) return
+        const results = await checkSocialMediaHandles(clean)
+        setSocialResults(results)
+      } catch (err) {
+        console.error('Social check failed:', err)
+      }
+    })
+  }
+
+  // ── Shared result row ──────────────────────────────────────────────────────
+  const ResultRow = ({
+    label, sublabel, available, error, action,
+  }: {
+    label: React.ReactNode; sublabel?: string
+    available: boolean; error?: string | null; action?: React.ReactNode
+  }) => (
+    <div className={`flex items-center justify-between px-4 py-3 rounded-lg border text-sm transition-colors ${
+      error
+        ? 'bg-amber-50/50 dark:bg-amber-950/20 border-amber-200/60 dark:border-amber-800/30'
+        : available
+          ? 'bg-green-50/50 dark:bg-green-950/20 border-green-200/60 dark:border-green-800/30'
+          : 'bg-slate-50/60 dark:bg-slate-900/30 border-slate-200/50 dark:border-slate-700/30'
+    }`}>
+      <div className="flex items-center gap-2.5">
+        {error
+          ? <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+          : available
+            ? <CheckCircle className="h-3.5 w-3.5 text-green-500 shrink-0" />
+            : <XCircle className="h-3.5 w-3.5 text-slate-300 dark:text-slate-600 shrink-0" />
+        }
+        <div>
+          <div className="font-medium text-slate-800 dark:text-slate-200">{label}</div>
+          {sublabel && <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{sublabel}</div>}
+          {error && <div className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">{error}</div>}
+        </div>
+      </div>
+      {action ?? (
+        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+          error
+            ? 'text-amber-600 dark:text-amber-400 bg-amber-100/60 dark:bg-amber-900/20'
+            : available
+              ? 'text-green-700 dark:text-green-400 bg-green-100/60 dark:bg-green-900/20'
+              : 'text-slate-400 dark:text-slate-500 bg-slate-100/80 dark:bg-slate-800/40'
+        }`}>
+          {error ? 'Error' : available ? 'Available' : 'Taken'}
+        </span>
+      )}
+    </div>
+  )
+
+  return (
+    <div className="min-h-screen bg-[#faf9ff] dark:bg-[#0e0b1a]">
+
+      {/* Background dot grid */}
+      <div
+        className="fixed inset-0 opacity-[0.025] dark:opacity-[0.04] pointer-events-none -z-10"
+        style={{
+          backgroundImage: "radial-gradient(circle, #7c3aed 1px, transparent 1px)",
+          backgroundSize: "28px 28px",
+        }}
+      />
+      {/* Soft corner blooms */}
+      <div className="fixed -top-48 -right-48 w-[500px] h-[500px] rounded-full bg-violet-200/20 dark:bg-violet-700/8 blur-3xl pointer-events-none -z-10" />
+      <div className="fixed bottom-0 -left-48 w-[420px] h-[420px] rounded-full bg-pink-200/15 dark:bg-pink-800/8 blur-3xl pointer-events-none -z-10" />
+
+      <div className="container mx-auto px-6 py-16 max-w-3xl">
+
+        {/* ── Page header ── */}
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="mb-12"
+        >
+          <p className="text-[11px] uppercase tracking-[0.2em] text-violet-500/60 dark:text-violet-400/50 font-medium mb-3">
+            Newsletter Toolkit
+          </p>
+          <h1
+            className="text-4xl md:text-5xl font-bold tracking-tight text-slate-900 dark:text-slate-50 mb-4"
+          >
+            Claim every corner<br />of your identity.
+          </h1>
+          <p className="text-slate-500 dark:text-slate-400 text-[0.9375rem] leading-relaxed max-w-md">
+            Check domain availability, surface SEO-smart name ideas, and lock in your social handles — before anyone else gets there.
+          </p>
+        </motion.div>
+
+        {/* ── Tabs ── */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.55, delay: 0.12 }}
+        >
           <Tabs defaultValue="domain" className="w-full">
-            <TabsList className="grid grid-cols-3 mb-8 w-full max-w-md mx-auto">
-              <TabsTrigger value="domain">Domain Checker</TabsTrigger>
-              <TabsTrigger value="seo">SEO Analysis</TabsTrigger>
-              <TabsTrigger value="social">Social Media</TabsTrigger>
+
+            {/* Tab list */}
+            <TabsList className="grid grid-cols-3 w-full mb-8 h-11 bg-slate-100/70 dark:bg-slate-800/40 p-1 rounded-xl border border-slate-200/50 dark:border-slate-700/30">
+              <TabsTrigger
+                value="domain"
+                className="text-sm rounded-lg transition-all text-slate-500 dark:text-slate-400 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-slate-900 dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-slate-200/60 dark:data-[state=active]:border-slate-700/40 font-medium"
+              >
+                <Globe className="h-3.5 w-3.5 mr-1.5 opacity-70" />
+                Domains
+              </TabsTrigger>
+              <TabsTrigger
+                value="seo"
+                className="text-sm rounded-lg transition-all text-slate-500 dark:text-slate-400 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-slate-900 dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-slate-200/60 dark:data-[state=active]:border-slate-700/40 font-medium"
+              >
+                <Search className="h-3.5 w-3.5 mr-1.5 opacity-70" />
+                SEO
+              </TabsTrigger>
+              <TabsTrigger
+                value="social"
+                className="text-sm rounded-lg transition-all text-slate-500 dark:text-slate-400 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-slate-900 dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-slate-200/60 dark:data-[state=active]:border-slate-700/40 font-medium"
+              >
+                <Twitter className="h-3.5 w-3.5 mr-1.5 opacity-70" />
+                Handles
+              </TabsTrigger>
             </TabsList>
 
+            {/* ── Domain Checker ── */}
             <TabsContent value="domain">
-              <GlassCard>
-                <GlassCardHeader>
-                  <h2 className="text-2xl font-semibold">Domain Availability Checker</h2>
-                  <p className="text-muted-foreground">
-                    Check if your desired domain name is available for your newsletter website.
-                  </p>
+              <GlassCard className="border-slate-200/50 dark:border-slate-700/30 bg-white/70 dark:bg-slate-900/40">
+                <GlassCardHeader className="pb-0">
+                  <div className="flex items-start gap-3 mb-6">
+                    <div className="w-8 h-8 rounded-lg bg-violet-500 flex items-center justify-center shrink-0 shadow-sm">
+                      <Globe className="h-4 w-4 text-white" />
+                    </div>
+                    <div>
+                      <h2
+                        className="text-lg font-semibold text-slate-900 dark:text-slate-100"
+                      >
+                        Domain Availability
+                      </h2>
+                      <p className="text-sm text-slate-400 dark:text-slate-500 mt-0.5">
+                        Check across .com, .io, .co, .net, .org, .dev, .app, and Substack in one go.
+                      </p>
+                    </div>
+                  </div>
                 </GlassCardHeader>
                 <GlassCardContent>
-                  <div className="space-y-4">
-                    <Label htmlFor="domain-name" className="text-xl font-semibold">Newsletter Domain Name</Label>
-                    <div className="flex gap-2 sm:flex-row flex-col pb-4">
-                      <Input
-                        id="domain-name"
-                        placeholder="yournewsletter"
-                        value={domainName.replace(/\..*$/, '')} // Prevent TLDs in input
-                        onChange={(e) => {
-                          const cleanName = e.target.value
-                            .replace(/\..*$/, '') // Remove any TLD
-                            .replace(/[^a-zA-Z0-9-]/g, ''); // Only allow valid domain characters
-                          setDomainName(cleanName);
-                        }}
-                        className="border-input/50 focus:border-primary w-full"
-                      />
-                      <Button 
-                        onClick={handleDomainCheck}
-                        disabled={isPending || !domainName}
-                        className="bg-gradient-to-r w-full sm:w-[300px] from-primary to-purple-400 hover:from-primary/90 hover:to-purple-400/90 text-white shadow-md hover:shadow-lg transition-all"
-                      >
-                        {isPending ? (
-                          <Loader className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <Globe className="mr-2 h-4 w-4" />
-                        )}
-                        Check Domain Availability
-                      </Button>
+                  <div className="space-y-5">
+                    <div className="space-y-2">
+                      <Label htmlFor="domain-name" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                        Newsletter name
+                      </Label>
+                      <div className="flex gap-2 sm:flex-row flex-col">
+                        <div className="relative flex-1">
+                          <Input
+                            id="domain-name"
+                            placeholder="e.g. techweekly"
+                            value={domainName.replace(/\..*$/, '')}
+                            onChange={(e) => setDomainName(e.target.value.replace(/\..*$/, '').replace(/[^a-zA-Z0-9-]/g, ''))}
+                            className="pr-14 border-slate-200/70 dark:border-slate-700/50 focus:border-violet-400 dark:focus:border-violet-500 bg-white dark:bg-slate-900"
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-300 dark:text-slate-600 pointer-events-none select-none">
+                            .com…
+                          </span>
+                        </div>
+                        <Button
+                          onClick={handleDomainCheck}
+                          disabled={isPending || !domainName}
+                          className="bg-slate-900 hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white text-white border-0 shrink-0 shadow-sm"
+                        >
+                          {isPending ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <Globe className="mr-2 h-4 w-4" />}
+                          Check All
+                        </Button>
+                      </div>
                     </div>
 
                     {domainResults.length > 0 && (
-                      <div className="mt-8 space-y-4">
-                        <h3 className="text-xl font-semibold">Domain Suggestions</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {domainResults.map((result) => (
-                          <div 
-                            key={result.domain}
-                            className={`flex items-center justify-between p-3 border rounded-md ${
-                              result.error
-                                ? 'bg-yellow-100/50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-900/50'
-                                : result.available 
-                                  ? 'bg-green-100/50 dark:bg-green-900/20 border-green-200 dark:border-green-900/50'
-                                  : 'bg-red-100/50 dark:bg-red-900/20 border-red-200 dark:border-red-900/50'
-                            }`}
-                          >
-                            <div className="flex items-center space-x-2">
-                              {result.error ? (
-                                <>
-                                  <AlertTriangle className="h-5 w-5 text-yellow-500" />
-                                  <div className="flex flex-col">
-                                    <span className="text-sm font-medium">{result.domain}</span>
-                                    <span className="text-xs text-yellow-600 dark:text-yellow-400">
-                                      {result.error.message}
-                                    </span>
-                                  </div>
-                                </>
-                              ) : (
-                                <>
-                                  {result.available ? (
-                                    <CheckCircle className="h-5 w-5 text-green-500" />
-                                  ) : (
-                                    <XCircle className="h-5 w-5 text-red-500" />
-                                  )}
-                                  <div className="flex flex-col">
-                                    <span className="text-sm font-medium">{result.domain}</span>
-                                    {result.isPlatform && (
-                                      <span className="text-xs text-muted-foreground">
-                                        Newsletter Platform
-                                      </span>
-                                    )}
-                                  </div>
-                                </>
-                              )}
-                            </div>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              disabled={!result.available || !!result.error}
-                              className={
-                                result.error
-                                  ? "border-yellow-500 text-yellow-700 dark:text-yellow-400"
-                                  : result.available 
-                                    ? "border-green-500 text-green-700 dark:text-green-400"
-                                    : "border-red-500 text-red-700 dark:text-red-400"
-                              }
-                            >
-                              {result.error 
-                                ? 'Check Failed' 
-                                : result.available 
-                                  ? 'Available' 
-                                  : 'Taken'
-                              }
-                            </Button>
-                          </div>
-                        ))}
+                      <motion.div
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="space-y-3 pt-1"
+                      >
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                            Results for <span className="text-violet-600 dark:text-violet-400 font-semibold">{domainName}</span>
+                          </p>
+                          <p className="text-xs text-slate-400 dark:text-slate-500">
+                            {domainResults.filter(r => r.available).length} of {domainResults.length} available
+                          </p>
                         </div>
-                      </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                          {domainResults.map((r) => (
+                            <ResultRow
+                              key={r.domain}
+                              label={r.domain}
+                              sublabel={r.isPlatform ? 'Newsletter Platform' : undefined}
+                              available={r.available}
+                              error={r.error?.message}
+                              action={
+                                r.available && !r.error ? (
+                                  <a
+                                    href={`https://www.namecheap.com/domains/registration/results/?domain=${r.domain}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs font-medium px-2.5 py-1 rounded-full bg-violet-600 text-white hover:bg-violet-700 transition-colors shrink-0"
+                                  >
+                                    Register →
+                                  </a>
+                                ) : undefined
+                              }
+                            />
+                          ))}
+                        </div>
+                      </motion.div>
                     )}
                   </div>
                 </GlassCardContent>
               </GlassCard>
             </TabsContent>
 
+            {/* ── SEO Analysis ── */}
             <TabsContent value="seo">
-              <GlassCard>
-                <GlassCardHeader>
-                  <h2 className="text-2xl font-semibold">SEO Name Analysis</h2>
-                  <p className="text-muted-foreground">
-                    Analyze your newsletter name for search engine optimization potential.
-                  </p>
+              <GlassCard className="border-slate-200/50 dark:border-slate-700/30 bg-white/70 dark:bg-slate-900/40">
+                <GlassCardHeader className="pb-0">
+                  <div className="flex items-start gap-3 mb-6">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center shrink-0 shadow-sm">
+                      <Search className="h-4 w-4 text-white" />
+                    </div>
+                    <div>
+                      <h2
+                        className="text-lg font-semibold text-slate-900 dark:text-slate-100"
+                      >
+                        SEO Name Suggestions
+                      </h2>
+                      <p className="text-sm text-slate-400 dark:text-slate-500 mt-0.5">
+                        Enter a topic and get keyword-aware name ideas tuned for search discoverability.
+                      </p>
+                    </div>
+                  </div>
                 </GlassCardHeader>
                 <GlassCardContent>
-                  <div className="space-y-4">
-                    <Label htmlFor="newsletter-name" className="text-xl font-semibold">Newsletter Name</Label>
-
-                    <div className="flex gap-2 flex-col sm:flex-row pb-4">
-                      <Input
-                        id="newsletter-name"
-                        placeholder="Enter your newsletter name"
-                        value={seoName}
-                        onChange={(e) => setSeoName(e.target.value)}
-                        className="w-full border-input/50 focus:border-primary"
-                      />
-
-                      <Button 
-                        onClick={handleSeoAnalysis}
-                        disabled={isPending || !seoName}
-                        className="w-full sm:w-[300px] bg-gradient-to-r from-primary to-purple-400 hover:from-primary/90 hover:to-purple-400/90 text-white shadow-md hover:shadow-lg transition-all"
-                      >
-                        {isPending ? (
-                          <Loader className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <Search className="mr-2 h-4 w-4" />
-                        )}
-                        Analyze SEO Potential
-                      </Button>
+                  <div className="space-y-5">
+                    <div className="space-y-2">
+                      <Label htmlFor="newsletter-name" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                        Topic or niche
+                      </Label>
+                      <div className="flex gap-2 flex-col sm:flex-row">
+                        <Input
+                          id="newsletter-name"
+                          placeholder="e.g. fintech, climate, remote work"
+                          value={seoName}
+                          onChange={(e) => setSeoName(e.target.value)}
+                          className="flex-1 border-slate-200/70 dark:border-slate-700/50 focus:border-violet-400 dark:focus:border-violet-500 bg-white dark:bg-slate-900"
+                        />
+                        <Button
+                          onClick={handleSeoAnalysis}
+                          disabled={isPending || !seoName}
+                          className="bg-slate-900 hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white text-white border-0 shrink-0 shadow-sm"
+                        >
+                          {isPending ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
+                          Generate
+                        </Button>
+                      </div>
                     </div>
-                    
 
                     {generatedNames.length > 0 && (
-                      <div className="mt-8 space-y-4">
-                        <h3 className="text-xl font-semibold">Suggested Names</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <motion.div
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="space-y-3 pt-1"
+                      >
+                        <p className="text-xs font-medium text-slate-500 dark:text-slate-400">SEO-friendly name ideas</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                           {generatedNames.map((name) => (
-                            <div 
+                            <div
                               key={name.id}
-                              className="flex items-center justify-between p-3 border rounded-md bg-muted/50"
+                              className="flex items-start justify-between px-4 py-3 rounded-lg border border-slate-200/50 dark:border-slate-700/30 bg-slate-50/60 dark:bg-slate-900/30 hover:border-slate-300 dark:hover:border-slate-600 transition-colors"
                             >
-                              <div className="space-y-1">
-                                <div className="font-medium">{name.name}</div>
-                                <div className="text-sm text-muted-foreground">{name.description}</div>
-                                <div className="text-xs text-primary">{name.category}</div>
+                              <div className="space-y-1 flex-1 pr-2">
+                                <div
+                                  className="font-semibold text-sm text-slate-800 dark:text-slate-200"
+                                >
+                                  {name.name}
+                                </div>
+                                <div className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed">
+                                  {name.description}
+                                </div>
+                                <span className="inline-block text-[10px] font-medium px-2 py-0.5 rounded-full bg-violet-100/70 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400">
+                                  {name.category}
+                                </span>
                               </div>
-                              <Button
-                                size="sm"
-                                variant="ghost"
+                              <button
                                 onClick={() => toggleFavorite(name.id)}
+                                className="shrink-0 p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                               >
-                                {name.isFavorite ? (
-                                  <CheckCircle className="h-5 w-5 text-primary" />
-                                ) : (
-                                  <CheckCircle className="h-5 w-5 text-muted-foreground" />
-                                )}
-                              </Button>
+                                <Star className={`h-3.5 w-3.5 ${name.isFavorite ? 'fill-violet-500 text-violet-500' : 'text-slate-300 dark:text-slate-600'}`} />
+                              </button>
                             </div>
                           ))}
                         </div>
-                      </div>
+                      </motion.div>
                     )}
                   </div>
                 </GlassCardContent>
               </GlassCard>
             </TabsContent>
 
+            {/* ── Social Handles ── */}
             <TabsContent value="social">
-              <GlassCard className="relative overflow-hidden">
-                {overlayVisible && <PremiumOverlay />}
-                <GlassCardHeader>
-                  <h2 className="text-2xl font-semibold">Social Media Handle Checker</h2>
-                  <p className="text-muted-foreground">
-                    {isPremium ? "Check availability of social media handles" : "Premium feature"}
-                  </p>
+              <GlassCard className="border-slate-200/50 dark:border-slate-700/30 bg-white/70 dark:bg-slate-900/40">
+                <GlassCardHeader className="pb-0">
+                  <div className="flex items-start gap-3 mb-6">
+                    <div className="w-8 h-8 rounded-lg bg-pink-500 flex items-center justify-center shrink-0 shadow-sm">
+                      <Twitter className="h-4 w-4 text-white" />
+                    </div>
+                    <div>
+                      <h2
+                        className="text-lg font-semibold text-slate-900 dark:text-slate-100"
+                      >
+                        Social Handle Checker
+                      </h2>
+                      <p className="text-sm text-slate-400 dark:text-slate-500 mt-0.5">
+                        Check Twitter/X, Instagram, LinkedIn, and YouTube all at once.
+                      </p>
+                    </div>
+                  </div>
                 </GlassCardHeader>
                 <GlassCardContent>
-                  <div className="space-y-4">
-                    <Label htmlFor="handle-name" className="text-xl font-semibold">Handle Name</Label>
-                    <div className="flex items-center sm:flex-row flex-col gap-2 pb-4">
-                      <div className="flex w-full">
-                        <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted/50 text-muted-foreground">
-                          @
-                        </span>
-                        <Input
-                          id="handle-name"
-                          placeholder="yournewsletter"
-                          value={handleName}
-                          onChange={(e) => setHandleName(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
-                          className="rounded-l-none border-input/50 focus:border-primary"
-                          disabled={!isPremium}
-                        />
+                  <div className="space-y-5">
+                    <div className="space-y-2">
+                      <Label htmlFor="handle-name" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                        Handle
+                      </Label>
+                      <div className="flex gap-2 sm:flex-row flex-col">
+                        <div className="flex flex-1">
+                          <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-slate-200/70 dark:border-slate-700/50 bg-slate-50/80 dark:bg-slate-800/60 text-slate-400 dark:text-slate-500 text-sm select-none">
+                            @
+                          </span>
+                          <Input
+                            id="handle-name"
+                            placeholder="yournewsletter"
+                            value={handleName}
+                            onChange={(e) => setHandleName(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
+                            className="rounded-l-none border-slate-200/70 dark:border-slate-700/50 focus:border-violet-400 dark:focus:border-violet-500 bg-white dark:bg-slate-900"
+                          />
+                        </div>
+                        <Button
+                          onClick={handleSocialCheck}
+                          disabled={isPending || !handleName}
+                          className="bg-slate-900 hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white text-white border-0 shrink-0 shadow-sm"
+                        >
+                          {isPending ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <Twitter className="mr-2 h-4 w-4" />}
+                          Check
+                        </Button>
                       </div>
-                      <Button 
-                        onClick={handleSocialCheck}
-                        disabled={isPending || !handleName || !isPremium}
-                        className="w-full sm:w-[300px] bg-gradient-to-r from-primary to-purple-400 hover:from-primary/90 hover:to-purple-400/90 text-white shadow-md hover:shadow-lg transition-all">
-                        {isPending ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : 
-                        isPremium ? "Check Availability" : "Premium Required"}
-                      </Button>
                     </div>
 
                     {socialResults.length > 0 && (
-                      <div className="mt-8 space-y-4">
-                        <h3 className="text-xl font-semibold">Handle Availability</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          {socialResults.map((result) => (
-                            <div 
-                              key={result.platform}
-                              className={`flex items-center justify-between p-3 border rounded-md ${
-                                result.available 
-                                  ? 'bg-green-100/50 dark:bg-green-900/20 border-green-200 dark:border-green-900/50'
-                                  : 'bg-red-100/50 dark:bg-red-900/20 border-red-200 dark:border-red-900/50'
-                              }`}>
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium capitalize">{result.platform}</span>
-                                <span className="text-muted-foreground">{result.handle}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                {result.available ? (
-                                  <>
-                                    <CheckCircle className="h-5 w-5 text-green-500" />
-                                    <span className="text-green-700 dark:text-green-400">Available</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <XCircle className="h-5 w-5 text-red-500" />
-                                    <span className="text-red-700 dark:text-red-400">Taken</span>
-                                  </>
-                                )}
-                              </div>
-                            </div>
+                      <motion.div
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="space-y-3 pt-1"
+                      >
+                        <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                          Results for{" "}
+                          <span className="text-violet-600 dark:text-violet-400 font-semibold">@{handleName}</span>
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                          {socialResults.map((r) => (
+                            <ResultRow
+                              key={r.platform}
+                              label={
+                                <span className="flex items-center gap-1.5 capitalize">
+                                  <span className="text-slate-400 dark:text-slate-500">
+                                    {PLATFORM_ICONS[r.platform.toLowerCase()] ?? null}
+                                  </span>
+                                  {r.platform}
+                                </span>
+                              }
+                              sublabel={r.handle}
+                              available={r.available}
+                            />
                           ))}
                         </div>
-                      </div>
+                      </motion.div>
                     )}
                   </div>
                 </GlassCardContent>
               </GlassCard>
             </TabsContent>
+
           </Tabs>
-        </div>
+        </motion.div>
       </div>
     </div>
   )
 }
-
