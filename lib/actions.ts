@@ -280,8 +280,28 @@ export async function checkDomainAvailability(name: string) {
     )
 
     if (!response.ok) {
+      // Handle specific API errors gracefully
+      if (response.status === 500) {
+        // API internal error - likely upstream WHOIS server issue
+        console.warn('API Layer service unavailable (500), returning unavailable')
+        return {
+          domain: domainToCheck,
+          available: false,
+          error: { message: 'Domain check service temporarily unavailable', code: 'SERVICE_UNAVAILABLE' }
+        }
+      } else if (response.status === 429) {
+        throw new Error('Too many domain check requests. Please try again later.')
+      } else if (response.status >= 500) {
+        // Other server errors - return safely as unavailable
+        return {
+          domain: domainToCheck,
+          available: false,
+          error: { message: 'Unable to check domain availability at this time', code: 'SERVICE_ERROR' }
+        }
+      }
+
       const errorBody = await response.text()
-      throw new Error(`API error: ${response.status} - ${errorBody}`)
+      throw new Error(`Domain check service error: ${response.status}`)
     }
 
     const data = await response.json()
@@ -370,8 +390,28 @@ export async function checkTLDAvailability(name: string, tld: string) {
     )
 
     if (!response.ok) {
+      // Handle specific API errors gracefully
+      if (response.status === 500) {
+        // API internal error - likely upstream WHOIS server issue
+        console.warn('API Layer service unavailable (500), returning unavailable')
+        return {
+          domain: domainToCheck,
+          available: false,
+          error: { message: 'Domain check service temporarily unavailable', code: 'SERVICE_UNAVAILABLE' }
+        }
+      } else if (response.status === 429) {
+        throw new Error('Too many domain check requests. Please try again later.')
+      } else if (response.status >= 500) {
+        // Other server errors - return safely as unavailable
+        return {
+          domain: domainToCheck,
+          available: false,
+          error: { message: 'Unable to check domain availability at this time', code: 'SERVICE_ERROR' }
+        }
+      }
+
       const errorBody = await response.text()
-      throw new Error(`API error: ${response.status} - ${errorBody}`)
+      throw new Error(`Domain check service error: ${response.status}`)
     }
 
     const data = await response.json()
